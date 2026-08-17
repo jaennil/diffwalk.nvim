@@ -75,6 +75,8 @@ function M.refresh(bufnr)
     width = math.max(width, vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff)
   end
 
+  local edges = config.options.edges
+
   for _, hunk in ipairs(file.hunks) do
     local seen = viewed.has(viewed.key(current.base, path, hunk.lnum))
 
@@ -103,6 +105,15 @@ function M.refresh(bufnr)
     for index, line in ipairs(hunk.lines) do
       if line <= last then
         local bracket = "\u{2502}"
+        if edges then
+          if count == 1 then
+            bracket = "\u{2500}"
+          elseif index == 1 then
+            bracket = "\u{250c}"
+          elseif index == count then
+            bracket = "\u{2514}"
+          end
+        end
 
         vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
           line_hl_group = seen and "DiffwalkViewed" or "DiffwalkAdded",

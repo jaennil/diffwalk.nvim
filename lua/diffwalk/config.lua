@@ -9,7 +9,6 @@ local M = {}
 --- @field removed_sign string foreground of the sign next to a removed line
 --- @field viewed string background of a hunk already looked at
 --- @field viewed_sign string foreground of the check mark next to it
---- @field edge string color of the rule marking where a hunk starts and ends
 
 --- @class DiffwalkConfig
 --- @field remote string remote the default branch is looked up on
@@ -22,7 +21,7 @@ local M = {}
 --- @field deleted boolean show removed lines as virtual lines
 --- @field word_diff boolean highlight the changed regions inside a line
 --- @field vertical boolean open the base version of a file in a vertical split
---- @field edges boolean underline where each hunk starts and ends
+--- @field edges boolean bracket each hunk in the sign column
 --- @field colors DiffwalkColors
 --- @field keys table<string, string>
 local defaults = {
@@ -38,7 +37,7 @@ local defaults = {
   deleted = true,
   word_diff = true,
   vertical = true,
-  edges = true,
+  edges = true, -- draw hunks as ┌ │ └ brackets rather than a plain bar
 
   -- most themes keep their diff colors a few shades above the background,
   -- which barely reads as green or red; these are deliberately saturated
@@ -51,7 +50,6 @@ local defaults = {
     removed_sign = "#ff005f",
     viewed = "#1c2a1c",
     viewed_sign = "#5f875f",
-    edge = "#6c7079",
   },
 
   keys = {
