@@ -15,8 +15,8 @@ local M = {}
 --- @field branches string[] fallbacks when the remote has no HEAD symref
 --- @field fetch boolean fetch the default branch before diffing
 --- @field commits integer how many commits the picker lists
---- @field height integer height of the panel
---- @field position string modifier for the panel split
+--- @field position string where the panel goes: right, left, bottom or top
+--- @field size integer columns when the panel is on a side, lines otherwise
 --- @field linehl boolean paint the whole line, not just the sign
 --- @field deleted boolean show removed lines as virtual lines
 --- @field word_diff boolean highlight the changed regions inside a line
@@ -29,8 +29,8 @@ local defaults = {
   fetch = true,
 
   commits = 100,
-  height = 15,
-  position = "botright",
+  position = "right",
+  size = 60,
 
   linehl = true,
   deleted = true,

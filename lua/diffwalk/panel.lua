@@ -68,7 +68,9 @@ function M.open(name, lines, marks)
     vim.api.nvim_win_set_buf(stale.win, buf)
     vim.api.nvim_set_current_win(stale.win)
   else
-    vim.cmd(("%s %dsplit"):format(opts.position, opts.height))
+    local side = opts.position == "right" or opts.position == "left"
+    local anchor = (opts.position == "right" or opts.position == "bottom") and "botright" or "topleft"
+    vim.cmd(("%s %d%s"):format(anchor, opts.size, side and "vsplit" or "split"))
     vim.api.nvim_win_set_buf(0, buf)
   end
 
@@ -84,6 +86,7 @@ function M.open(name, lines, marks)
   vim.wo.signcolumn = "no"
   vim.wo.wrap = false
   vim.wo.cursorline = true
+  vim.wo.winfixwidth = true
   vim.wo.winfixheight = true
 
   return buf, vim.api.nvim_get_current_win(), origin
