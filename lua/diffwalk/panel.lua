@@ -155,7 +155,9 @@ function M.hunks(name, files, base, back)
 
     -- gitsigns attaches and diffs asynchronously: the first paint of a buffer
     -- lands before any of it exists, leaving the file looking unchanged and
-    -- deleted virtual lines missing their indent until something redraws
+    -- deleted virtual lines missing their indent until something redraws.
+    -- The update event is the usual cue, but it can fire before this even
+    -- subscribes, so the screen is nudged a few times regardless.
     vim.api.nvim_create_autocmd("User", {
       pattern = "GitSignsUpdate",
       once = true,
@@ -163,6 +165,22 @@ function M.hunks(name, files, base, back)
         vim.cmd("redraw!")
       end,
     })
+
+    local timer = vim.uv.new_timer()
+    local tries = 0
+    timer:start(
+      60,
+      220,
+      vim.schedule_wrap(function()
+        tries = tries + 1
+        vim.cmd("redraw!")
+
+        if tries >= 3 and not timer:is_closing() then
+          timer:stop()
+          timer:close()
+        end
+      end)
+    )
 
     if not focus and vim.api.nvim_win_is_valid(list) then
       vim.api.nvim_set_current_win(list)
