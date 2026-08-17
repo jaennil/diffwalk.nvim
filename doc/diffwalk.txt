@@ -1,0 +1,166 @@
+*diffwalk.txt*  Walk a diff in the file itself, navigate from a panel
+
+==============================================================================
+CONTENTS                                                     *diffwalk-contents*
+
+    1. Introduction ......................... |diffwalk-introduction|
+    2. Requirements ......................... |diffwalk-requirements|
+    3. Commands ............................. |diffwalk-commands|
+    4. Panel ................................ |diffwalk-panel|
+    5. Configuration ........................ |diffwalk-config|
+    6. Lua API .............................. |diffwalk-api|
+    7. Caveats .............................. |diffwalk-caveats|
+
+==============================================================================
+1. INTRODUCTION                                          *diffwalk-introduction*
+
+diffwalk highlights a change in the file you already work in, using gitsigns,
+and gives you a panel that is nothing but navigation: one line per file, one
+line per hunk. Your LSP, your jumps and your keymaps keep working, because you
+never leave the real buffer.
+
+Two things can be walked: the current branch against the default branch, and
+a single commit against its parent.
+
+==============================================================================
+2. REQUIREMENTS                                          *diffwalk-requirements*
+
+    - Neovim 0.10 or newer
+    - gitsigns.nvim, which draws the in-file highlights
+    - git in $PATH
+
+==============================================================================
+3. COMMANDS                                                  *diffwalk-commands*
+
+                                                              *:DiffwalkBranch*
+:DiffwalkBranch         Hunks between the merge base with the default branch
+                        and the working tree. The merge base is used so that
+                        commits landed upstream after you branched stay out of
+                        the diff.
+
+                                                             *:DiffwalkCommits*
+:DiffwalkCommits [n]    List the last [n] commits (default: |diffwalk-config|
+                        `commits`). <CR> walks the diff of the commit under
+                        the cursor, <BS> comes back to the list.
+
+                                                              *:DiffwalkCommit*
+:DiffwalkCommit {rev}   Walk the diff of {rev} against its parent. A root
+                        commit is diffed against the empty tree.
+
+                                                               *:DiffwalkFiles*
+:DiffwalkFiles          Put the changed files of the branch in the quickfix
+                        list and set the diff base.
+
+                                                       *:DiffwalkToggleDeleted*
+:DiffwalkToggleDeleted  Show or hide removed lines in the file buffers. They
+                        are virtual lines, so they push real code down.
+
+                                                               *:DiffwalkReset*
+:DiffwalkReset          Drop the diff base and every highlight it turned on.
+
+==============================================================================
+4. PANEL                                                        *diffwalk-panel*
+
+A file line carries the path and the counts, a hunk line the line number, the
+kind of the first change and its text: >
+
+    lua/jaennil/plugins/gitsigns.lua  +25 -0
+         9  + on_attach = function(bufnr)
+<
+Default mappings inside the panel:
+
+    <CR>        open the hunk and move there
+    o           open it, keep the cursor in the list
+    ]f          next file
+    [f          previous file
+    <BS>        back to the commit list
+    q           close the panel
+
+==============================================================================
+5. CONFIGURATION                                               *diffwalk-config*
+
+setup() is optional. Defaults: >
+
+    require("diffwalk").setup({
+      remote = "origin",
+      branches = { "master", "main" },
+      fetch = true,
+
+      commits = 100,
+      height = 15,
+      position = "botright",
+
+      linehl = true,
+      deleted = true,
+      word_diff = true,
+
+      colors = {
+        added = "#005f00",
+        added_word = "#008700",
+        added_sign = "#5fd75f",
+        removed = "#5f0000",
+        removed_word = "#870000",
+        removed_sign = "#ff005f",
+      },
+
+      keys = {
+        open = "<CR>",
+        preview = "o",
+        next_file = "]f",
+        prev_file = "[f",
+        back = "<BS>",
+        close = "q",
+      },
+    })
+<
+remote          Remote the default branch is looked up on.
+
+branches        Fallbacks used when the remote has no HEAD symref. Set it up
+                once with `git remote set-head origin -a` and this is skipped.
+
+fetch           Fetch the default branch before computing the merge base. Set
+                to false to work offline against what you already have.
+
+colors          The defaults are the saturated 256-color diff palette, not the
+                theme's DiffAdd and DiffDelete: those sit a couple of shades
+                above the background and lose against syntax highlighting.
+
+                They are applied to the gitsigns groups, including the word
+                diff ones, which otherwise link to TermCursor (reverse video)
+                and show up as bright blocks. Inside a fully deleted line the
+                word diff is flattened to the line color, since there it would
+                only cover ragged chunks of leading whitespace.
+
+keys            Set an entry to false or "" to leave it unmapped.
+
+==============================================================================
+6. LUA API                                                        *diffwalk-api*
+
+                                                            *diffwalk.branch()*
+require("diffwalk").branch()
+
+                                                             *diffwalk.files()*
+require("diffwalk").files()
+
+                                                           *diffwalk.commits()*
+require("diffwalk").commits([limit])
+
+                                                            *diffwalk.commit()*
+require("diffwalk").commit({rev} [, {back}])
+                        {back} is called when <BS> is pressed in the panel.
+
+                                                    *diffwalk.toggle_deleted()*
+require("diffwalk").toggle_deleted()
+
+                                                             *diffwalk.reset()*
+require("diffwalk").reset()
+
+==============================================================================
+7. CAVEATS                                                    *diffwalk-caveats*
+
+<CR> opens the current version of the file on disk. For a branch review that
+is exact. For an older commit the line numbers drift as far as the file has
+moved since that commit, and a file deleted in the working tree is reported
+instead of opened.
+
+vim:tw=78:ts=8:ft=help:norl:
