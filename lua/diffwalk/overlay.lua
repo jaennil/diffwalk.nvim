@@ -78,22 +78,6 @@ function M.refresh(bufnr)
   for _, hunk in ipairs(file.hunks) do
     local seen = viewed.has(viewed.key(current.base, path, hunk.lnum))
 
-    -- where the hunk begins and ends: the context line above it and its own
-    -- last changed line, so two hunks in a row stay apart
-    if config.options.edges and #hunk.lines > 0 then
-      local top = hunk.lines[1] - 1
-      local bottom = hunk.lines[#hunk.lines]
-
-      for _, line in ipairs({ top, bottom }) do
-        if line >= 1 and line <= last then
-          vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
-            line_hl_group = "DiffwalkEdge",
-            priority = 900,
-          })
-        end
-      end
-    end
-
     -- what the change removed, above the line that replaced it
     if show_deleted and #hunk.deleted > 0 then
       local hl = seen and "DiffwalkViewed" or "DiffwalkRemoved"
@@ -113,37 +97,29 @@ function M.refresh(bufnr)
       })
     end
 
-    -- a file the base does not have gets no gitsigns highlights at all, so
-    -- its added lines are painted here
-    if file.absent and not seen then
-      for _, line in ipairs(hunk.lines) do
-        if line <= last then
-          vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
-            line_hl_group = "DiffwalkAdded",
-            sign_text = line == hunk.lines[1] and "\u{2503} " or nil,
-            sign_hl_group = "DiffwalkAddedSign",
-            priority = 1000,
-          })
-        end
+    -- the added lines: painted here rather than left to gitsigns, which
+    -- diffs asynchronously and would let the file show up uncolored first
+    local count = #hunk.lines
+    for index, line in ipairs(hunk.lines) do
+      if line <= last then
+        local bracket = "\u{2502}"
+
+        vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
+          line_hl_group = seen and "DiffwalkViewed" or "DiffwalkAdded",
+          sign_text = (seen and index == 1) and "\u{2713} " or (bracket .. " "),
+          sign_hl_group = seen and "DiffwalkViewedSign" or "DiffwalkAddedSign",
+          priority = 1000,
+        })
       end
     end
 
-    if seen then
-      for _, line in ipairs(hunk.lines) do
-        if line <= last then
-          vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
-            line_hl_group = "DiffwalkViewed",
-            priority = 1000,
-          })
-        end
-      end
-
-      -- a hunk that only deletes covers no line here, so the check mark goes
-      -- where the deletion happened
-      local sign_at = math.min(math.max(hunk.lines[1] or hunk.first, 1), last)
-      vim.api.nvim_buf_set_extmark(bufnr, ns, sign_at - 1, 0, {
-        sign_text = "✓ ",
-        sign_hl_group = "DiffwalkViewedSign",
+    -- a hunk that only deletes covers no line here, so its mark goes where
+    -- the deletion happened
+    if count == 0 then
+      local at = math.min(math.max(hunk.deleted_at or hunk.first, 1), last)
+      vim.api.nvim_buf_set_extmark(bufnr, ns, at - 1, 0, {
+        sign_text = seen and "\u{2713} " or "\u{2500} ",
+        sign_hl_group = seen and "DiffwalkViewedSign" or "DiffwalkRemovedSign",
         priority = 1000,
       })
     end

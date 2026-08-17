@@ -55,9 +55,7 @@ function M.palette()
   -- lines up with the real code
   vim.api.nvim_set_hl(0, "DiffwalkRemoved", { bg = colors.removed })
 
-  -- an underline is a border that costs no line: it marks where a hunk ends
-  -- without pushing the code apart, and leaves the background under it intact
-  vim.api.nvim_set_hl(0, "DiffwalkEdge", { underline = true, sp = colors.edge })
+  vim.api.nvim_set_hl(0, "DiffwalkRemovedSign", { fg = colors.removed_sign })
 end
 
 --- @param base string revision the file buffers are diffed against
@@ -70,6 +68,10 @@ function M.enable(base)
   gitsigns.change_base(base, true)
   gitsigns.toggle_linehl(opts.linehl)
   gitsigns.toggle_word_diff(opts.word_diff)
+
+  -- the sign column is drawn by diffwalk: one bracket per hunk, so where it
+  -- starts and ends is visible next to the line numbers
+  gitsigns.toggle_signs(false)
 
   -- gitsigns anchors its deleted lines to the left edge of the window
   -- (virt_lines_leftcol), which shifts them out of line with the code by the
@@ -84,6 +86,7 @@ function M.disable()
   gitsigns.toggle_linehl(false)
   gitsigns.toggle_deleted(false)
   gitsigns.toggle_word_diff(false)
+  gitsigns.toggle_signs(true)
 end
 
 --- deleted lines are the noisiest part of a review, so keep them togglable
