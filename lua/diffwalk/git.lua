@@ -133,6 +133,13 @@ function M.show(rev, path)
   return vim.split(out, "\n", { plain = true })
 end
 
+--- @param rev string
+--- @param path string
+--- @return boolean whether the file exists at that revision
+function M.exists(rev, path)
+  return M.run({ "git", "cat-file", "-e", rev .. ":" .. path }, true) ~= nil
+end
+
 --- revision the file buffers are currently diffed against; the branch review
 --- and a commit review set different ones
 --- @param base? string

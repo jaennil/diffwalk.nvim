@@ -67,6 +67,13 @@ a single commit against its parent.
 :DiffwalkToggleDeleted  Show or hide removed lines in the file buffers. They
                         are virtual lines, so they push real code down.
 
+                        diffwalk draws them itself: gitsigns anchors its own
+                        to the left edge of the window, which shifts them out
+                        of line with the code by the width of the sign column,
+                        and virtual text does not expand tabs. Here they are
+                        expanded against the buffer's tabstop and padded to
+                        the window, so the indent matches what is beside them.
+
                                                                *:DiffwalkReset*
 :DiffwalkReset          Drop the diff base, every highlight it turned on and
                         the viewed marks.
@@ -100,6 +107,10 @@ many of its hunks are done: >
       lazy-lock.json  +15 -11  0/2
            2  - "fidget.nvim": { "branch": "main", ...
 <
+A file that does not exist at the base is painted by diffwalk too: gitsigns
+does not attach to one, which would otherwise leave a newly added file looking
+unchanged.
+
 A marked hunk is dimmed in the file as well: its changed lines drop from the
 review palette to `DiffwalkViewed` and get a check mark in the sign column,
 drawn above the gitsigns ones. Only the changed lines are dimmed, never the
@@ -121,8 +132,8 @@ setup() is optional. Defaults: >
       fetch = true,
 
       commits = 100,
-      height = 15,
-      position = "botright",
+      position = "right",
+      size = 60,
 
       linehl = true,
       deleted = true,
@@ -169,6 +180,10 @@ colors          The defaults are the saturated 256-color diff palette, not the
                 and show up as bright blocks. Inside a fully deleted line the
                 word diff is flattened to the line color, since there it would
                 only cover ragged chunks of leading whitespace.
+
+position        Where the panel goes: "right", "left", "bottom" or "top".
+
+size            Columns when the panel is on a side, lines otherwise.
 
 vertical        Whether :DiffwalkOld splits vertically.
 

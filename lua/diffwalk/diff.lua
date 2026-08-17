@@ -29,7 +29,7 @@ function M.parse(diff)
       lnum = tonumber(start)
       -- lines carries the added lines only, so marking a viewed hunk in the
       -- file never dims the context around it
-      hunk = { lnum = lnum, first = lnum, lines = {}, added = 0, removed = 0 }
+      hunk = { lnum = lnum, first = lnum, lines = {}, deleted = {}, added = 0, removed = 0 }
       table.insert(file.hunks, hunk)
     elseif hunk and kind == "+" then
       file.added, hunk.added = file.added + 1, hunk.added + 1
@@ -41,6 +41,8 @@ function M.parse(diff)
     elseif hunk and kind == "-" then
       file.removed, hunk.removed = file.removed + 1, hunk.removed + 1
       hunk.first = math.min(hunk.first, lnum)
+      hunk.deleted_at = hunk.deleted_at or lnum -- where the removal happened
+      table.insert(hunk.deleted, line:sub(2))
       if not hunk.text then
         hunk.lnum, hunk.sign, hunk.text = lnum, "-", vim.trim(line:sub(2))
       end

@@ -45,6 +45,15 @@ function M.palette()
   -- a hunk that has been looked at drops out of the loud palette
   vim.api.nvim_set_hl(0, "DiffwalkViewed", { bg = colors.viewed })
   vim.api.nvim_set_hl(0, "DiffwalkViewedSign", { fg = colors.viewed_sign })
+
+  -- gitsigns does not attach to a file that is absent from the base, so those
+  -- are painted here instead, in the same green
+  vim.api.nvim_set_hl(0, "DiffwalkAdded", { bg = colors.added })
+  vim.api.nvim_set_hl(0, "DiffwalkAddedSign", { fg = colors.added_sign })
+
+  -- deleted lines are drawn by diffwalk, not gitsigns, so that their indent
+  -- lines up with the real code
+  vim.api.nvim_set_hl(0, "DiffwalkRemoved", { bg = colors.removed })
 end
 
 --- @param base string revision the file buffers are diffed against
@@ -56,8 +65,12 @@ function M.enable(base)
   M.palette()
   gitsigns.change_base(base, true)
   gitsigns.toggle_linehl(opts.linehl)
-  gitsigns.toggle_deleted(opts.deleted)
   gitsigns.toggle_word_diff(opts.word_diff)
+
+  -- gitsigns anchors its deleted lines to the left edge of the window
+  -- (virt_lines_leftcol), which shifts them out of line with the code by the
+  -- width of the sign column; diffwalk.overlay draws them instead
+  gitsigns.toggle_deleted(false)
 end
 
 function M.disable()
@@ -72,7 +85,7 @@ end
 --- deleted lines are the noisiest part of a review, so keep them togglable
 --- @return boolean shown
 function M.toggle_deleted()
-  return require("gitsigns").toggle_deleted()
+  return require("diffwalk.overlay").toggle_deleted()
 end
 
 return M

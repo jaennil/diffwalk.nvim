@@ -9,8 +9,34 @@ local M = {}
 local ns = vim.api.nvim_create_namespace("diffwalk-viewed")
 local group = vim.api.nvim_create_augroup("diffwalk-overlay", { clear = true })
 
---- @type {base: string?, files: table<string, table[]>}
+--- @type {base: string?, files: table<string, table>}
 local current = { base = nil, files = {} }
+
+local show_deleted = true
+
+--- Virtual text does not expand tabs, so a tab-indented line would render
+--- narrower than the code around it. Expanded here against the buffer's own
+--- tabstop, which is what makes the two line up.
+--- @param text string
+--- @param tabstop integer
+--- @return string
+local function expand_tabs(text, tabstop)
+  local out = {}
+  local width = 0
+
+  for char in text:gmatch(".") do
+    if char == "\t" then
+      local fill = tabstop - (width % tabstop)
+      table.insert(out, string.rep(" ", fill))
+      width = width + fill
+    else
+      table.insert(out, char)
+      width = width + 1
+    end
+  end
+
+  return table.concat(out)
+end
 
 --- @param bufnr integer
 --- @return string? path relative to the repo root
@@ -32,15 +58,60 @@ function M.refresh(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 
   local path = current.base and relpath(bufnr)
-  local hunks = path and current.files[path]
-  if not hunks then
+  local file = path and current.files[path]
+  if not file then
     return
   end
 
   local last = vim.api.nvim_buf_line_count(bufnr)
 
-  for _, hunk in ipairs(hunks) do
-    if viewed.has(viewed.key(current.base, path, hunk.lnum)) then
+  local tabstop = vim.bo[bufnr].tabstop
+  local width = 0
+
+  -- pad the deleted lines out to the window, so they read as a band rather
+  -- than as text floating on the normal background
+  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+    width = math.max(width, vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff)
+  end
+
+  for _, hunk in ipairs(file.hunks) do
+    local seen = viewed.has(viewed.key(current.base, path, hunk.lnum))
+
+    -- what the change removed, above the line that replaced it
+    if show_deleted and #hunk.deleted > 0 then
+      local hl = seen and "DiffwalkViewed" or "DiffwalkRemoved"
+      local virt = {}
+
+      for _, text in ipairs(hunk.deleted) do
+        local expanded = expand_tabs(text, tabstop)
+        expanded = expanded .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(expanded), 0))
+        table.insert(virt, { { expanded, hl } })
+      end
+
+      local anchor = math.min(math.max(hunk.deleted_at or hunk.first, 1), last)
+      vim.api.nvim_buf_set_extmark(bufnr, ns, anchor - 1, 0, {
+        virt_lines = virt,
+        virt_lines_above = true,
+        priority = 1000,
+      })
+    end
+
+    -- a file the base does not have gets no gitsigns highlights at all, so
+    -- its added lines are painted here
+    if file.absent and not seen then
+      for _, line in ipairs(hunk.lines) do
+        if line <= last then
+          vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
+            line_hl_group = "DiffwalkAdded",
+            sign_text = line == hunk.lines[1] and "\u{2503} " or nil,
+            sign_hl_group = "DiffwalkAddedSign",
+            priority = 1000,
+          })
+        end
+      end
+    end
+
+    if seen then
       for _, line in ipairs(hunk.lines) do
         if line <= last then
           vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
@@ -74,7 +145,10 @@ function M.set(base, files)
   current = { base = base, files = {} }
 
   for _, file in ipairs(files) do
-    current.files[file.path] = file.hunks
+    current.files[file.path] = {
+      hunks = file.hunks,
+      absent = not git.exists(base, file.path),
+    }
   end
 
   vim.api.nvim_clear_autocmds({ group = group })
@@ -87,6 +161,13 @@ function M.set(base, files)
   })
 
   M.refresh_all()
+end
+
+--- @return boolean shown
+function M.toggle_deleted()
+  show_deleted = not show_deleted
+  M.refresh_all()
+  return show_deleted
 end
 
 function M.clear()
