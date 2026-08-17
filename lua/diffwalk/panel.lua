@@ -183,6 +183,7 @@ function M.hunks(name, files, base, back)
     if target and target.keys then
       viewed.toggle_all(target.keys)
       redraw()
+      require("diffwalk.overlay").refresh_all()
     end
   end, "Mark the hunk, or the whole file, as viewed")
   M.map(buf, keys.filter, function()

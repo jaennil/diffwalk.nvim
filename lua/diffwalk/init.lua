@@ -2,6 +2,7 @@ local config = require("diffwalk.config")
 local diff = require("diffwalk.diff")
 local git = require("diffwalk.git")
 local highlight = require("diffwalk.highlight")
+local overlay = require("diffwalk.overlay")
 local panel = require("diffwalk.panel")
 
 local M = {}
@@ -30,7 +31,9 @@ function M.branch()
 
   highlight.enable(base)
 
-  panel.hunks(base:sub(1, 7), diff.parse(out), base)
+  local files = diff.parse(out)
+  overlay.set(base, files)
+  panel.hunks(base:sub(1, 7), files, base)
 end
 
 --- changed files of the branch in the quickfix list
@@ -71,7 +74,9 @@ function M.commit(rev, back)
 
   highlight.enable(parent)
 
-  panel.hunks(rev, diff.parse(out), parent, back)
+  local files = diff.parse(out)
+  overlay.set(parent, files)
+  panel.hunks(rev, files, parent, back)
 end
 
 --- pick a commit, then walk its diff; <CR> drills in, <BS> comes back here
@@ -114,6 +119,7 @@ end
 --- drop the diff base and every highlight it turned on
 function M.reset()
   require("diffwalk.viewed").clear()
+  overlay.clear()
   git.forget()
   highlight.disable()
   vim.cmd("diffoff!")

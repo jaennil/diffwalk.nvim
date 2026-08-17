@@ -41,6 +41,10 @@ function M.palette()
   -- inside a fully deleted line the word diff covers arbitrary chunks, leading
   -- whitespace included, which only breaks the line into ragged shades
   vim.api.nvim_set_hl(0, "GitSignsDeleteVirtLnInLine", { bg = colors.removed })
+
+  -- a hunk that has been looked at drops out of the loud palette
+  vim.api.nvim_set_hl(0, "DiffwalkViewed", { bg = colors.viewed })
+  vim.api.nvim_set_hl(0, "DiffwalkViewedSign", { fg = colors.viewed_sign })
 end
 
 --- @param base string revision the file buffers are diffed against

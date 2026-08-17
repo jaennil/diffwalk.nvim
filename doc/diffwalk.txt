@@ -100,6 +100,12 @@ many of its hunks are done: >
       lazy-lock.json  +15 -11  0/2
            2  - "fidget.nvim": { "branch": "main", ...
 <
+A marked hunk is dimmed in the file as well: its changed lines drop from the
+review palette to `DiffwalkViewed` and get a check mark in the sign column,
+drawn above the gitsigns ones. Only the changed lines are dimmed, never the
+context around them; deleted lines stay red, since those are virtual lines and
+the check mark beside them is the marker.
+
 Marking is manual: `x` on a hunk line, or on a file line for all of its hunks.
 The marks are keyed by file and line for the session only: |:DiffwalkReset|
 drops them, and they stop matching once the hunks move under them.
@@ -130,6 +136,8 @@ setup() is optional. Defaults: >
         removed = "#5f0000",
         removed_word = "#870000",
         removed_sign = "#ff005f",
+        viewed = "#1c2a1c",
+        viewed_sign = "#5f875f",
       },
 
       keys = {

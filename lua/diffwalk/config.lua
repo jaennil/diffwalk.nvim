@@ -7,6 +7,8 @@ local M = {}
 --- @field removed string background of a line the change removes
 --- @field removed_word string background of a removed word diff region
 --- @field removed_sign string foreground of the sign next to a removed line
+--- @field viewed string background of a hunk already looked at
+--- @field viewed_sign string foreground of the check mark next to it
 
 --- @class DiffwalkConfig
 --- @field remote string remote the default branch is looked up on
@@ -44,6 +46,8 @@ local defaults = {
     removed = "#5f0000",
     removed_word = "#870000",
     removed_sign = "#ff005f",
+    viewed = "#1c2a1c",
+    viewed_sign = "#5f875f",
   },
 
   keys = {
