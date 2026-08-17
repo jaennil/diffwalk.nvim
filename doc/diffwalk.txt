@@ -100,9 +100,9 @@ many of its hunks are done: >
       lazy-lock.json  +15 -11  0/2
            2  - "fidget.nvim": { "branch": "main", ...
 <
-Opening a hunk marks it, unless |diffwalk-config| `mark_on_open` is false. The
-marks are keyed by file and line for the session only: |:DiffwalkReset| drops
-them, and they stop matching once the hunks move under them.
+Marking is manual: `x` on a hunk line, or on a file line for all of its hunks.
+The marks are keyed by file and line for the session only: |:DiffwalkReset|
+drops them, and they stop matching once the hunks move under them.
 
 ==============================================================================
 5. CONFIGURATION                                               *diffwalk-config*
@@ -122,7 +122,6 @@ setup() is optional. Defaults: >
       deleted = true,
       word_diff = true,
       vertical = true,
-      mark_on_open = true,
 
       colors = {
         added = "#005f00",
@@ -164,8 +163,6 @@ colors          The defaults are the saturated 256-color diff palette, not the
                 only cover ragged chunks of leading whitespace.
 
 vertical        Whether :DiffwalkOld splits vertically.
-
-mark_on_open    Whether opening a hunk marks it viewed. |diffwalk-viewed|
 
 keys            Set an entry to false or "" to leave it unmapped.
 

@@ -84,8 +84,7 @@ require("diffwalk").setup({
   height = 15,
   position = "botright",
 
-  vertical = true,     -- :DiffwalkOld splits vertically
-  mark_on_open = true, -- opening a hunk marks it as viewed
+  vertical = true,   -- :DiffwalkOld splits vertically
   linehl = true,     -- paint the whole line, not just the sign
   deleted = true,    -- show removed lines as virtual lines
   word_diff = true,  -- highlight the changed regions inside a line

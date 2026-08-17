@@ -19,7 +19,6 @@ local M = {}
 --- @field deleted boolean show removed lines as virtual lines
 --- @field word_diff boolean highlight the changed regions inside a line
 --- @field vertical boolean open the base version of a file in a vertical split
---- @field mark_on_open boolean opening a hunk marks it as viewed
 --- @field colors DiffwalkColors
 --- @field keys table<string, string>
 local defaults = {
@@ -35,7 +34,6 @@ local defaults = {
   deleted = true,
   word_diff = true,
   vertical = true,
-  mark_on_open = true,
 
   -- most themes keep their diff colors a few shades above the background,
   -- which barely reads as green or red; these are deliberately saturated

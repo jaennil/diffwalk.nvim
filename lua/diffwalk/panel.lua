@@ -139,12 +139,6 @@ function M.hunks(name, files, base, back)
       return
     end
 
-    if opts.mark_on_open and not target.header then
-      for _, key in ipairs(target.keys or {}) do
-        viewed.set(key, true)
-      end
-    end
-
     if vim.api.nvim_win_is_valid(origin) then
       vim.api.nvim_set_current_win(origin)
     else
@@ -156,13 +150,8 @@ function M.hunks(name, files, base, back)
     vim.api.nvim_win_set_cursor(0, { math.min(math.max(target.lnum, 1), last), 0 })
     vim.cmd("normal! zz")
 
-    if vim.api.nvim_win_is_valid(list) then
-      local current = vim.api.nvim_get_current_win()
+    if not focus and vim.api.nvim_win_is_valid(list) then
       vim.api.nvim_set_current_win(list)
-      redraw()
-      if focus then
-        vim.api.nvim_set_current_win(current)
-      end
     end
   end
 
