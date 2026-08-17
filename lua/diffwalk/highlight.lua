@@ -54,6 +54,10 @@ function M.palette()
   -- deleted lines are drawn by diffwalk, not gitsigns, so that their indent
   -- lines up with the real code
   vim.api.nvim_set_hl(0, "DiffwalkRemoved", { bg = colors.removed })
+
+  -- an underline is a border that costs no line: it marks where a hunk ends
+  -- without pushing the code apart, and leaves the background under it intact
+  vim.api.nvim_set_hl(0, "DiffwalkEdge", { underline = true, sp = colors.edge })
 end
 
 --- @param base string revision the file buffers are diffed against

@@ -19,6 +19,7 @@ Most diff viewers put the change in a separate buffer, where your LSP, your jump
 - **Reading what was removed** — deleted lines are drawn as virtual lines, and the cursor cannot enter virtual text. `:DiffwalkOld` opens the file as it was at the base in a real buffer next to it, both sides in diff mode, so a removed signature can be walked, searched and yanked.
 - **Keeping track** — mark a hunk (or a whole file) as viewed, and it dims in both places at once: in the list, and in the file itself, where it drops out of the loud green and picks up a `✓` in the sign column. What is still bright is what is left to read.
 - **Two colors, everywhere** — green for what the change adds, red for what it removes, in the line background, in the word diff and in the sign column.
+- **Hunk borders** — each hunk is underlined where it starts and where it ends, so two of them in a row never read as one block. An underline costs no line, unlike a separator row.
 - **Deleted lines that line up** — they are drawn by diffwalk rather than gitsigns, so their indent matches the code beside them, tabs included.
 
 ## Requirements
@@ -86,6 +87,7 @@ require("diffwalk").setup({
   size = 60,           -- columns on a side, lines otherwise
 
   vertical = true,   -- :DiffwalkOld splits vertically
+  edges = true,      -- underline where each hunk starts and ends
   linehl = true,     -- paint the whole line, not just the sign
   deleted = true,    -- show removed lines as virtual lines
   word_diff = true,  -- highlight the changed regions inside a line
@@ -99,6 +101,7 @@ require("diffwalk").setup({
     removed_sign = "#ff005f",
     viewed = "#1c2a1c",
     viewed_sign = "#5f875f",
+    edge = "#6c7079",
   },
 
   keys = {

@@ -139,6 +139,7 @@ setup() is optional. Defaults: >
       deleted = true,
       word_diff = true,
       vertical = true,
+      edges = true,
 
       colors = {
         added = "#005f00",
@@ -149,6 +150,7 @@ setup() is optional. Defaults: >
         removed_sign = "#ff005f",
         viewed = "#1c2a1c",
         viewed_sign = "#5f875f",
+        edge = "#6c7079",
       },
 
       keys = {
@@ -180,6 +182,12 @@ colors          The defaults are the saturated 256-color diff palette, not the
                 and show up as bright blocks. Inside a fully deleted line the
                 word diff is flattened to the line color, since there it would
                 only cover ragged chunks of leading whitespace.
+
+edges           Whether each hunk is underlined where it starts and where it
+                ends: the context line above it and its own last changed line.
+                An underline needs no room of its own and leaves the diff
+                background under it intact, so two hunks in a row stay apart
+                without the code being pushed further apart.
 
 position        Where the panel goes: "right", "left", "bottom" or "top".
 

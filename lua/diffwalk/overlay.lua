@@ -1,6 +1,7 @@
 --- What the file buffers show about viewed hunks: gitsigns paints every hunk
 --- the same, so a hunk already looked at is dimmed back down here and given a
 --- check mark of its own.
+local config = require("diffwalk.config")
 local git = require("diffwalk.git")
 local viewed = require("diffwalk.viewed")
 
@@ -76,6 +77,22 @@ function M.refresh(bufnr)
 
   for _, hunk in ipairs(file.hunks) do
     local seen = viewed.has(viewed.key(current.base, path, hunk.lnum))
+
+    -- where the hunk begins and ends: the context line above it and its own
+    -- last changed line, so two hunks in a row stay apart
+    if config.options.edges and #hunk.lines > 0 then
+      local top = hunk.lines[1] - 1
+      local bottom = hunk.lines[#hunk.lines]
+
+      for _, line in ipairs({ top, bottom }) do
+        if line >= 1 and line <= last then
+          vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
+            line_hl_group = "DiffwalkEdge",
+            priority = 900,
+          })
+        end
+      end
+    end
 
     -- what the change removed, above the line that replaced it
     if show_deleted and #hunk.deleted > 0 then
