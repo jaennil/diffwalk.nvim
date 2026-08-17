@@ -18,6 +18,38 @@ local show_deleted = true
 --- Virtual text does not expand tabs, so a tab-indented line would render
 --- narrower than the code around it. Expanded here against the buffer's own
 --- tabstop, which is what makes the two line up.
+--- Virtual lines are never wrapped by Neovim: a removed line longer than the
+--- window is simply cut off, while the real code beside it wraps. Split by
+--- display width so the whole of it stays readable.
+--- @param text string
+--- @param width integer
+--- @return string[]
+local function wrap_line(text, width)
+  if width <= 0 or vim.fn.strdisplaywidth(text) <= width then
+    return { text }
+  end
+
+  local pieces, current, taken = {}, {}, 0
+
+  for _, char in ipairs(vim.fn.split(text, "\\zs")) do
+    local size = vim.fn.strdisplaywidth(char)
+
+    if taken + size > width then
+      table.insert(pieces, table.concat(current))
+      current, taken = {}, 0
+    end
+
+    table.insert(current, char)
+    taken = taken + size
+  end
+
+  if #current > 0 then
+    table.insert(pieces, table.concat(current))
+  end
+
+  return pieces
+end
+
 --- @param text string
 --- @param tabstop integer
 --- @return string
@@ -68,11 +100,13 @@ function M.refresh(bufnr)
 
   local tabstop = vim.bo[bufnr].tabstop
   local width = 0
+  local wrap = false
 
   -- pad the deleted lines out to the window, so they read as a band rather
   -- than as text floating on the normal background
   for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
     width = math.max(width, vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff)
+    wrap = wrap or vim.wo[win].wrap
   end
 
   local edges = config.options.edges
@@ -90,8 +124,12 @@ function M.refresh(bufnr)
 
         for _, text in ipairs(run.lines) do
           local expanded = expand_tabs(text, tabstop)
-          expanded = expanded .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(expanded), 0))
-          table.insert(virt, { { expanded, hl } })
+          local pieces = wrap and wrap_line(expanded, width) or { expanded }
+
+          for _, piece in ipairs(pieces) do
+            piece = piece .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(piece), 0))
+            table.insert(virt, { { piece, hl } })
+          end
         end
 
         -- a run past the end of the file hangs under the last line instead
@@ -165,9 +203,19 @@ function M.set(base, files)
   vim.api.nvim_clear_autocmds({ group = group })
   vim.api.nvim_create_autocmd({ "BufWinEnter", "BufReadPost" }, {
     group = group,
-    desc = "diffwalk: mark viewed hunks in a file opened later",
+    desc = "diffwalk: paint a file opened after the review started",
     callback = function(args)
       M.refresh(args.buf)
+    end,
+  })
+
+  -- the deleted lines are wrapped and padded to the window, so a resize has
+  -- to rebuild them
+  vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
+    group = group,
+    desc = "diffwalk: rewrap the deleted lines for the new width",
+    callback = function()
+      M.refresh_all()
     end,
   })
 
