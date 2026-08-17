@@ -5,10 +5,11 @@ Walk a review the way you read code: the diff is highlighted **in the file itsel
 Most diff viewers put the change in a separate buffer, where your LSP, your jumps and your muscle memory don't work. diffwalk keeps you in the real file — gitsigns paints what the branch added and removed, and a list of files and hunks tells you where to go next.
 
 ```
-lua/jaennil/plugins/gitsigns.lua  +25 -0
-     9  + on_attach = function(bufnr)
-lazy-lock.json  +15 -11
-     2  - "fidget.nvim": { "branch": "main", ...
+✓ lua/jaennil/plugins/gitsigns.lua  +25 -0  1/1
+✓      9  + on_attach = function(bufnr)
+  lazy-lock.json  +15 -11  0/2
+       2  - "fidget.nvim": { "branch": "main", ...
+      14  + "gitlab.nvim": { "branch": "develop", ...
 ```
 
 ## What it does
@@ -16,6 +17,7 @@ lazy-lock.json  +15 -11
 - **Branch review** — every hunk between the merge base with the default branch and your working tree. The merge base, not the branch tip, so commits that landed upstream after you branched stay out.
 - **Commit review** — pick a commit from a list, walk its own diff, come back, pick the next one.
 - **Reading what was removed** — deleted lines are drawn as virtual lines, and the cursor cannot enter virtual text. `:DiffwalkOld` opens the file as it was at the base in a real buffer next to it, both sides in diff mode, so a removed signature can be walked, searched and yanked.
+- **Keeping track** — mark a hunk (or a whole file) as viewed, dim what is done, and hide it entirely when you want only what is left. A big review stops being a game of memory.
 - **Two colors, everywhere** — green for what the change adds, red for what it removes, in the line background, in the word diff and in the sign column.
 
 ## Requirements
@@ -63,6 +65,8 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 | `<CR>` | Open the hunk and move there |
 | `o` | Open it, keep the cursor in the list |
 | `]f` / `[f` | Next / previous file |
+| `x` | Mark the hunk as viewed; on a file line, the whole file |
+| `a` | Toggle between all hunks and only the unviewed ones |
 | `<BS>` | Back to the commit list |
 | `q` | Close |
 
@@ -80,7 +84,8 @@ require("diffwalk").setup({
   height = 15,
   position = "botright",
 
-  vertical = true,   -- :DiffwalkOld splits vertically
+  vertical = true,     -- :DiffwalkOld splits vertically
+  mark_on_open = true, -- opening a hunk marks it as viewed
   linehl = true,     -- paint the whole line, not just the sign
   deleted = true,    -- show removed lines as virtual lines
   word_diff = true,  -- highlight the changed regions inside a line
@@ -99,6 +104,8 @@ require("diffwalk").setup({
     preview = "o",
     next_file = "]f",
     prev_file = "[f",
+    mark = "x",
+    filter = "a",
     back = "<BS>",
     close = "q",
   },
@@ -119,6 +126,7 @@ colors = { added = "#1d2214", removed = "#2d2220", ... }
 
 - `<CR>` opens the **current** version of the file. For a branch review that's exact; for an old commit the line numbers drift as far as the file has moved since.
 - Removed lines are virtual lines — they push the real code down. `:DiffwalkToggleDeleted` turns them off, `:DiffwalkOld` gives you a buffer to walk them in.
+- Viewed marks live in memory for the session and are keyed by file and line, so they are dropped by `:DiffwalkReset` and stop matching once the hunks move under them.
 - The buffer `:DiffwalkOld` opens is not a file on disk: treesitter highlights it, but no LSP attaches to it.
 
 ## License

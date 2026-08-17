@@ -30,8 +30,7 @@ function M.branch()
 
   highlight.enable(base)
 
-  local lines, marks, targets = diff.render(diff.parse(out))
-  panel.hunks(base:sub(1, 7), lines, marks, targets)
+  panel.hunks(base:sub(1, 7), diff.parse(out), base)
 end
 
 --- changed files of the branch in the quickfix list
@@ -72,8 +71,7 @@ function M.commit(rev, back)
 
   highlight.enable(parent)
 
-  local lines, marks, targets = diff.render(diff.parse(out))
-  panel.hunks(rev, lines, marks, targets, back)
+  panel.hunks(rev, diff.parse(out), parent, back)
 end
 
 --- pick a commit, then walk its diff; <CR> drills in, <BS> comes back here
@@ -115,6 +113,7 @@ end
 
 --- drop the diff base and every highlight it turned on
 function M.reset()
+  require("diffwalk.viewed").clear()
   git.forget()
   highlight.disable()
   vim.cmd("diffoff!")

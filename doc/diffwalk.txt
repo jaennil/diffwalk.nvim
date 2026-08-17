@@ -68,7 +68,8 @@ a single commit against its parent.
                         are virtual lines, so they push real code down.
 
                                                                *:DiffwalkReset*
-:DiffwalkReset          Drop the diff base and every highlight it turned on.
+:DiffwalkReset          Drop the diff base, every highlight it turned on and
+                        the viewed marks.
 
 ==============================================================================
 4. PANEL                                                        *diffwalk-panel*
@@ -85,8 +86,23 @@ Default mappings inside the panel:
     o           open it, keep the cursor in the list
     ]f          next file
     [f          previous file
+    x           mark as viewed; on a file line, the whole file
+    a           show all hunks, or only the unviewed ones
     <BS>        back to the commit list
     q           close the panel
+
+                                                             *diffwalk-viewed*
+A viewed hunk carries a check mark and is dimmed, and a file line counts how
+many of its hunks are done: >
+
+    ✓ lua/jaennil/plugins/gitsigns.lua  +25 -0  1/1
+    ✓      9  + on_attach = function(bufnr)
+      lazy-lock.json  +15 -11  0/2
+           2  - "fidget.nvim": { "branch": "main", ...
+<
+Opening a hunk marks it, unless |diffwalk-config| `mark_on_open` is false. The
+marks are keyed by file and line for the session only: |:DiffwalkReset| drops
+them, and they stop matching once the hunks move under them.
 
 ==============================================================================
 5. CONFIGURATION                                               *diffwalk-config*
@@ -106,6 +122,7 @@ setup() is optional. Defaults: >
       deleted = true,
       word_diff = true,
       vertical = true,
+      mark_on_open = true,
 
       colors = {
         added = "#005f00",
@@ -121,6 +138,8 @@ setup() is optional. Defaults: >
         preview = "o",
         next_file = "]f",
         prev_file = "[f",
+        mark = "x",
+        filter = "a",
         back = "<BS>",
         close = "q",
       },
@@ -145,6 +164,8 @@ colors          The defaults are the saturated 256-color diff palette, not the
                 only cover ragged chunks of leading whitespace.
 
 vertical        Whether :DiffwalkOld splits vertically.
+
+mark_on_open    Whether opening a hunk marks it viewed. |diffwalk-viewed|
 
 keys            Set an entry to false or "" to leave it unmapped.
 

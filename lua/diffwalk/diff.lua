@@ -1,6 +1,9 @@
 local git = require("diffwalk.git")
+local viewed = require("diffwalk.viewed")
 
 local M = {}
+
+local MARK = "\u{2713} "
 
 --- files with their hunks, each hunk pointing at its first changed line
 --- @param diff string output of git diff
@@ -45,37 +48,79 @@ function M.parse(diff)
   return files
 end
 
---- one line per file, one per hunk; targets[line] is where <CR> jumps
+--- one line per file, one per hunk; targets[line] is where <CR> jumps.
+--- Hunks already looked at carry a check mark and are dimmed, and can be left
+--- out entirely.
 --- @param files table[]
+--- @param base string revision the diff is against, part of the viewed key
+--- @param hide_viewed? boolean drop hunks and files that are fully viewed
 --- @return string[] lines, table[] marks, table<integer, table> targets
-function M.render(files)
+function M.render(files, base, hide_viewed)
   local lines, marks, targets = {}, {}, {}
   local root = git.root()
 
   for _, file in ipairs(files) do
     local path = root .. "/" .. file.path
-    local added = ("+%d"):format(file.added)
-    local removed = ("-%d"):format(file.removed)
-
-    table.insert(lines, ("%s  %s %s"):format(file.path, added, removed))
-    targets[#lines] = {
-      file = path,
-      lnum = file.hunks[1] and file.hunks[1].lnum or 1,
-      header = true,
-    }
-
-    local col = #file.path + 2
-    table.insert(marks, { #lines, 0, #file.path, "Directory" })
-    table.insert(marks, { #lines, col, col + #added, "Added" })
-    table.insert(marks, { #lines, col + #added + 1, col + #added + 1 + #removed, "Removed" })
+    local keys, pending = {}, {}
 
     for _, hunk in ipairs(file.hunks) do
-      local number = ("%6d"):format(hunk.lnum)
-      local sign = hunk.sign or " "
-      table.insert(lines, ("%s  %s %s"):format(number, sign, hunk.text or ""))
-      targets[#lines] = { file = path, lnum = hunk.lnum }
-      table.insert(marks, { #lines, 0, #number, "LineNr" })
-      table.insert(marks, { #lines, #number + 2, #number + 3, sign == "-" and "Removed" or "Added" })
+      local key = viewed.key(base, file.path, hunk.lnum)
+      table.insert(keys, key)
+      if not viewed.has(key) then
+        table.insert(pending, { hunk = hunk, key = key })
+      end
+    end
+
+    local seen_count = #keys - #pending
+    local done = #pending == 0 and #keys > 0
+
+    if not (hide_viewed and done) then
+      local added = ("+%d"):format(file.added)
+      local removed = ("-%d"):format(file.removed)
+      local mark = done and MARK or "  "
+      local progress = ("%d/%d"):format(seen_count, #keys)
+
+      table.insert(lines, ("%s%s  %s %s  %s"):format(mark, file.path, added, removed, progress))
+      targets[#lines] = {
+        file = path,
+        lnum = file.hunks[1] and file.hunks[1].lnum or 1,
+        header = true,
+        keys = keys,
+      }
+
+      if done then
+        table.insert(marks, { #lines, 0, -1, "Comment" })
+      else
+        local at = #mark + #file.path + 2
+        table.insert(marks, { #lines, #mark, #mark + #file.path, "Directory" })
+        table.insert(marks, { #lines, at, at + #added, "Added" })
+        table.insert(marks, { #lines, at + #added + 1, at + #added + 1 + #removed, "Removed" })
+        table.insert(marks, { #lines, at + #added + #removed + 2, -1, "Comment" })
+      end
+
+      local shown = hide_viewed and pending or nil
+      for index, hunk in ipairs(file.hunks) do
+        local key = keys[index]
+        local skip = shown and viewed.has(key)
+
+        if not skip then
+          local seen = viewed.has(key)
+          local mark_hunk = seen and MARK or "  "
+          local number = ("%6d"):format(hunk.lnum)
+          local sign = hunk.sign or " "
+
+          table.insert(lines, ("%s%s  %s %s"):format(mark_hunk, number, sign, hunk.text or ""))
+          targets[#lines] = { file = path, lnum = hunk.lnum, keys = { key } }
+
+          if seen then
+            table.insert(marks, { #lines, 0, -1, "Comment" })
+          else
+            table.insert(marks, { #lines, #mark_hunk, #mark_hunk + #number, "LineNr" })
+            local sign_at = #mark_hunk + #number + 2
+            table.insert(marks, { #lines, sign_at, sign_at + 1, sign == "-" and "Removed" or "Added" })
+          end
+        end
+      end
     end
   end
 

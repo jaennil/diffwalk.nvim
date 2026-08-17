@@ -26,6 +26,22 @@ local function previous()
   return { bufs = bufs, win = win }
 end
 
+--- @param buf integer
+--- @param lines string[]
+--- @param marks table[] {line, from_col, to_col, group}; to_col -1 means end of line
+function M.paint(buf, lines, marks)
+  vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+
+  for _, mark in ipairs(marks) do
+    local line, from, to, group = unpack(mark)
+    local last = #(lines[line] or "")
+    vim.api.nvim_buf_set_extmark(buf, ns, line - 1, math.min(from, last), {
+      end_col = to == -1 and last or math.min(to, last),
+      hl_group = group,
+    })
+  end
+end
+
 --- a scratch buffer in a split, reusing the window of a list opened earlier
 --- @param name string suffix of the buffer name
 --- @param lines string[]
@@ -45,11 +61,7 @@ function M.open(name, lines, marks)
   vim.bo[buf].filetype = "diffwalk"
   vim.bo[buf].bufhidden = "wipe"
 
-  for _, mark in ipairs(marks) do
-    local line, from, to, group = unpack(mark)
-    vim.api.nvim_buf_set_extmark(buf, ns, line - 1, from, { end_col = to, hl_group = group })
-  end
-
+  M.paint(buf, lines, marks)
   vim.bo[buf].modifiable = false
 
   if vim.api.nvim_win_is_valid(stale.win or -1) then
@@ -87,15 +99,34 @@ function M.map(buf, lhs, rhs, desc)
   end
 end
 
---- a hunk list: jumping into the file, walking files, going back, closing
+--- a hunk list: jumping into the file, walking files, marking what has been
+--- looked at, hiding it, going back, closing
 --- @param name string
---- @param lines string[]
---- @param marks table[]
---- @param targets table<integer, table>
+--- @param files table[] as returned by diff.parse
+--- @param base string revision the diff is against
 --- @param back? function what <BS> returns to
-function M.hunks(name, lines, marks, targets, back)
-  local keys = config.options.keys
+function M.hunks(name, files, base, back)
+  local diff = require("diffwalk.diff")
+  local viewed = require("diffwalk.viewed")
+  local opts = config.options
+  local keys = opts.keys
+
+  local hide = false
+  local lines, marks, targets = diff.render(files, base, hide)
   local buf, list, origin = M.open(name, lines, marks)
+
+  local function redraw()
+    local cursor = vim.api.nvim_win_get_cursor(list)
+
+    lines, marks, targets = diff.render(files, base, hide)
+
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modifiable = false
+    M.paint(buf, lines, marks)
+
+    vim.api.nvim_win_set_cursor(list, { math.min(math.max(cursor[1], 1), math.max(#lines, 1)), 0 })
+  end
 
   local function open(focus)
     local target = targets[vim.fn.line(".")]
@@ -106,6 +137,12 @@ function M.hunks(name, lines, marks, targets, back)
     if not vim.uv.fs_stat(target.file) then
       vim.notify(target.file .. " is gone in the working tree", vim.log.levels.WARN)
       return
+    end
+
+    if opts.mark_on_open and not target.header then
+      for _, key in ipairs(target.keys or {}) do
+        viewed.set(key, true)
+      end
     end
 
     if vim.api.nvim_win_is_valid(origin) then
@@ -119,8 +156,13 @@ function M.hunks(name, lines, marks, targets, back)
     vim.api.nvim_win_set_cursor(0, { math.min(math.max(target.lnum, 1), last), 0 })
     vim.cmd("normal! zz")
 
-    if not focus and vim.api.nvim_win_is_valid(list) then
+    if vim.api.nvim_win_is_valid(list) then
+      local current = vim.api.nvim_get_current_win()
       vim.api.nvim_set_current_win(list)
+      redraw()
+      if focus then
+        vim.api.nvim_set_current_win(current)
+      end
     end
   end
 
@@ -147,6 +189,18 @@ function M.hunks(name, lines, marks, targets, back)
   M.map(buf, keys.prev_file, function()
     to_file(-1)
   end, "Previous file")
+  M.map(buf, keys.mark, function()
+    local target = targets[vim.fn.line(".")]
+    if target and target.keys then
+      viewed.toggle_all(target.keys)
+      redraw()
+    end
+  end, "Mark the hunk, or the whole file, as viewed")
+  M.map(buf, keys.filter, function()
+    hide = not hide
+    redraw()
+    vim.notify("diffwalk: showing " .. (hide and "unviewed hunks" or "all hunks"))
+  end, "Show all hunks or only the unviewed ones")
   M.map(buf, keys.close, "<CMD>close<CR>", "Close the list")
 
   if back then
