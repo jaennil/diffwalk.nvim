@@ -153,6 +153,17 @@ function M.hunks(name, files, base, back)
     vim.api.nvim_win_set_cursor(0, { math.min(math.max(target.lnum, 1), last), 0 })
     vim.cmd("normal! zz")
 
+    -- gitsigns attaches and diffs asynchronously: the first paint of a buffer
+    -- lands before any of it exists, leaving the file looking unchanged and
+    -- deleted virtual lines missing their indent until something redraws
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "GitSignsUpdate",
+      once = true,
+      callback = function()
+        vim.cmd("redraw!")
+      end,
+    })
+
     if not focus and vim.api.nvim_win_is_valid(list) then
       vim.api.nvim_set_current_win(list)
     end
