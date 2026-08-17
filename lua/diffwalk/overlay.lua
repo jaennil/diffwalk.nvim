@@ -71,6 +71,30 @@ local function expand_tabs(text, tabstop)
   return table.concat(out)
 end
 
+--- Width of the gutter, worked out rather than read from getwininfo: with
+--- signcolumn=auto the column is still empty when this runs, and it is the
+--- marks placed below that widen it. Reading it now would be two columns short
+--- and the deleted lines would sit out of line with the code.
+--- @param win integer
+--- @param lines integer line count of the buffer
+--- @return integer
+local function gutter_width(win, lines)
+  local wo = vim.wo[win]
+  local width = 0
+
+  if wo.number or wo.relativenumber then
+    width = width + math.max(wo.numberwidth, #tostring(lines) + 1)
+  end
+
+  if wo.signcolumn ~= "no" and not wo.signcolumn:find("number") then
+    width = width + 2
+  end
+
+  width = width + (tonumber(wo.foldcolumn) or 0)
+
+  return width
+end
+
 --- @param bufnr integer
 --- @return string? path relative to the repo root
 local function relpath(bufnr)
@@ -99,36 +123,104 @@ function M.refresh(bufnr)
   local last = vim.api.nvim_buf_line_count(bufnr)
 
   local tabstop = vim.bo[bufnr].tabstop
-  local width = 0
+  local width, textoff = 0, 0
   local wrap = false
 
-  -- pad the deleted lines out to the window, so they read as a band rather
-  -- than as text floating on the normal background
+  -- deleted lines are padded to the window so they read as a band, and their
+  -- own gutter is drawn by hand: virtual lines have no sign column
   for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
-    width = math.max(width, vim.api.nvim_win_get_width(win) - vim.fn.getwininfo(win)[1].textoff)
+    local gutter = gutter_width(win, last)
+    width = math.max(width, vim.api.nvim_win_get_width(win) - gutter)
+    textoff = math.max(textoff, gutter)
     wrap = wrap or vim.wo[win].wrap
   end
 
   local edges = config.options.edges
 
+  --- the bracket for one line of a hunk, given where it falls in it
+  local function bracket(index, total)
+    if not edges then
+      return "\u{2502}"
+    elseif total == 1 then
+      return "\u{2500}"
+    elseif index == 1 then
+      return "\u{250c}"
+    elseif index == total then
+      return "\u{2514}"
+    end
+
+    return "\u{2502}"
+  end
+
   for _, hunk in ipairs(file.hunks) do
     local seen = viewed.has(viewed.key(current.base, path, hunk.lnum))
+    local sign_hl = seen and "DiffwalkViewedSign" or "DiffwalkAddedSign"
 
-    -- each run of removed lines sits above the line that took its place, so
-    -- the order of the hunk survives instead of every deletion bunching up
+    local runs = {}
     if show_deleted then
-      local hl = seen and "DiffwalkViewed" or "DiffwalkRemoved"
-
       for _, run in ipairs(hunk.deletions) do
+        runs[run.at] = run
+      end
+    end
+
+    -- every line of the hunk in the order it appears on screen, deleted ones
+    -- included, so the bracket runs through the whole of it
+    local order, positions, taken = {}, {}, {}
+    for _, line in ipairs(hunk.lines) do
+      if not taken[line] then
+        taken[line], positions[#positions + 1] = true, line
+      end
+    end
+    for at in pairs(runs) do
+      if not taken[at] then
+        taken[at], positions[#positions + 1] = true, at
+      end
+    end
+    table.sort(positions)
+
+    local added = {}
+    for _, line in ipairs(hunk.lines) do
+      added[line] = true
+    end
+
+    for _, position in ipairs(positions) do
+      local run = runs[position]
+      if run then
+        for _ = 1, #run.lines do
+          order[#order + 1] = { deleted = true, at = position }
+        end
+      end
+      if added[position] then
+        order[#order + 1] = { line = position }
+      end
+    end
+
+    local total = #order
+    local index = 0
+
+    -- the deleted runs, each above the line that took its place
+    for _, position in ipairs(positions) do
+      local run = runs[position]
+
+      if run then
+        local hl = seen and "DiffwalkViewed" or "DiffwalkRemoved"
         local virt = {}
 
         for _, text in ipairs(run.lines) do
+          index = index + 1
+
+          local gutter = (seen and index == 1) and "\u{2713} " or (bracket(index, total) .. " ")
+          gutter = gutter .. string.rep(" ", math.max(textoff - vim.fn.strdisplaywidth(gutter), 0))
+
           local expanded = expand_tabs(text, tabstop)
           local pieces = wrap and wrap_line(expanded, width) or { expanded }
 
-          for _, piece in ipairs(pieces) do
+          for piece_index, piece in ipairs(pieces) do
             piece = piece .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(piece), 0))
-            table.insert(virt, { { piece, hl } })
+
+            -- a wrapped remainder continues the line, so its gutter is blank
+            local prefix = piece_index == 1 and gutter or string.rep(" ", textoff)
+            table.insert(virt, { { prefix, sign_hl }, { piece, hl } })
           end
         end
 
@@ -139,39 +231,28 @@ function M.refresh(bufnr)
         vim.api.nvim_buf_set_extmark(bufnr, ns, anchor - 1, 0, {
           virt_lines = virt,
           virt_lines_above = above,
+          virt_lines_leftcol = true,
           priority = 1000,
         })
       end
-    end
 
-    -- the added lines: painted here rather than left to gitsigns, which
-    -- diffs asynchronously and would let the file show up uncolored first
-    local count = #hunk.lines
-    for index, line in ipairs(hunk.lines) do
-      if line <= last then
-        local bracket = "\u{2502}"
-        if edges then
-          if count == 1 then
-            bracket = "\u{2500}"
-          elseif index == 1 then
-            bracket = "\u{250c}"
-          elseif index == count then
-            bracket = "\u{2514}"
-          end
-        end
+      -- the added lines: painted here rather than left to gitsigns, which
+      -- diffs asynchronously and would let the file show up uncolored first
+      if added[position] and position <= last then
+        index = index + 1
 
-        vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
+        vim.api.nvim_buf_set_extmark(bufnr, ns, position - 1, 0, {
           line_hl_group = seen and "DiffwalkViewed" or "DiffwalkAdded",
-          sign_text = (seen and index == 1) and "\u{2713} " or (bracket .. " "),
-          sign_hl_group = seen and "DiffwalkViewedSign" or "DiffwalkAddedSign",
+          sign_text = (seen and index == 1) and "\u{2713} " or (bracket(index, total) .. " "),
+          sign_hl_group = sign_hl,
           priority = 1000,
         })
       end
     end
 
-    -- a hunk that only deletes covers no line here, so its mark goes where
-    -- the deletion happened
-    if count == 0 then
+    -- a hunk that only deletes and whose runs fell outside the buffer still
+    -- deserves a mark where it happened
+    if total == 0 then
       local at = math.min(math.max(hunk.deleted_at or hunk.first, 1), last)
       vim.api.nvim_buf_set_extmark(bufnr, ns, at - 1, 0, {
         sign_text = seen and "\u{2713} " or "\u{2500} ",

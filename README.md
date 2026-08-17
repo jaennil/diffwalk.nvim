@@ -19,7 +19,7 @@ Most diff viewers put the change in a separate buffer, where your LSP, your jump
 - **Reading what was removed** — deleted lines are drawn as virtual lines, and the cursor cannot enter virtual text. `:DiffwalkOld` opens the file as it was at the base in a real buffer next to it, both sides in diff mode, so a removed signature can be walked, searched and yanked.
 - **Keeping track** — mark a hunk (or a whole file) as viewed, and it dims in both places at once: in the list, and in the file itself, where it drops out of the loud green and picks up a `✓` in the sign column. What is still bright is what is left to read.
 - **Two colors, everywhere** — green for what the change adds, red for what it removes, in the line background, in the word diff and in the sign column.
-- **Hunk brackets** — each hunk is drawn as `┌ │ └` in the sign column, next to the line numbers, so where one ends and the next begins is obvious without a separator row cutting through the code.
+- **Hunk brackets** — each hunk is drawn as `┌ │ └` in the gutter, next to the line numbers, so where one ends and the next begins is obvious without a separator row cutting through the code. The bracket covers the removed lines too, even though virtual lines have no sign column of their own.
 - **No waiting for the color** — diffwalk paints the added lines itself from the diff it already has, instead of leaving the file uncolored until gitsigns finishes diffing in the background.
 - **Deleted lines that line up** — they are drawn by diffwalk rather than gitsigns, so their indent matches the code beside them, tabs included.
 

@@ -192,6 +192,14 @@ edges           Whether a hunk is bracketed in the sign column as `┌ │ └`
                 are turned off while a review is on, so the two never fight
                 over it.
 
+                The bracket runs through the removed lines as well. Those are
+                virtual lines, which have no sign column, so their gutter is
+                drawn as part of the line and padded to the width the real
+                one takes: the count of the number column, two columns for the
+                signs and the fold column. That width is worked out rather
+                than read back, because with signcolumn=auto the column is
+                still empty at the moment the marks are placed.
+
 position        Where the panel goes: "right", "left", "bottom" or "top".
 
 size            Columns when the panel is on a side, lines otherwise.
