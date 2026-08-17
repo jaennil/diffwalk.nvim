@@ -107,9 +107,10 @@ many of its hunks are done: >
       lazy-lock.json  +15 -11  0/2
            2  - "fidget.nvim": { "branch": "main", ...
 <
-A file that does not exist at the base is painted by diffwalk too: gitsigns
-does not attach to one, which would otherwise leave a newly added file looking
-unchanged.
+The added lines are painted by diffwalk, not gitsigns: gitsigns diffs in the
+background, which left a file showing up uncolored for a moment after it was
+opened, and it does not attach at all to a file that is absent from the base,
+which left a newly added file looking unchanged.
 
 A marked hunk is dimmed in the file as well: its changed lines drop from the
 review palette to `DiffwalkViewed` and get a check mark in the sign column,
@@ -150,7 +151,6 @@ setup() is optional. Defaults: >
         removed_sign = "#ff005f",
         viewed = "#1c2a1c",
         viewed_sign = "#5f875f",
-        edge = "#6c7079",
       },
 
       keys = {
@@ -183,11 +183,14 @@ colors          The defaults are the saturated 256-color diff palette, not the
                 word diff is flattened to the line color, since there it would
                 only cover ragged chunks of leading whitespace.
 
-edges           Whether each hunk is underlined where it starts and where it
-                ends: the context line above it and its own last changed line.
-                An underline needs no room of its own and leaves the diff
-                background under it intact, so two hunks in a row stay apart
-                without the code being pushed further apart.
+edges           Whether a hunk is bracketed in the sign column as `┌ │ └`
+                rather than drawn as a plain bar. The bracket sits beside the
+                line numbers, so the start and the end of a hunk are visible
+                without a separator row cutting through the code.
+
+                The sign column is drawn by diffwalk, and the gitsigns signs
+                are turned off while a review is on, so the two never fight
+                over it.
 
 position        Where the panel goes: "right", "left", "bottom" or "top".
 
