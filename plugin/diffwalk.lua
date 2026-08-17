@@ -23,6 +23,10 @@ command("DiffwalkCommit", function(args)
   require("diffwalk").commit(args.args)
 end, { nargs = 1, desc = "Walk the diff of a commit" })
 
+command("DiffwalkOld", function()
+  require("diffwalk").old()
+end, { desc = "Open the base version of the file side by side" })
+
 command("DiffwalkToggleDeleted", function()
   require("diffwalk").toggle_deleted()
 end, { desc = "Show or hide removed lines in the file" })

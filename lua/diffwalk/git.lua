@@ -9,6 +9,7 @@ local state = {
   base = nil,
   branch = nil,
   root = nil,
+  active = nil,
 }
 
 --- @param args string[]
@@ -104,8 +105,47 @@ function M.commits(limit)
   return entries
 end
 
+--- path of a file relative to the repo root, as git names it
+--- @param file string
+--- @return string?
+function M.relpath(file)
+  local root = M.root()
+  if not root then
+    return nil
+  end
+
+  local abs = vim.fn.fnamemodify(file, ":p")
+  if abs:sub(1, #root + 1) == root .. "/" then
+    return abs:sub(#root + 2)
+  end
+end
+
+--- contents of a file at a revision
+--- @param rev string
+--- @param path string
+--- @return string[]? lines, nil when the file does not exist there
+function M.show(rev, path)
+  local out = M.run({ "git", "show", rev .. ":" .. path }, true)
+  if not out then
+    return nil
+  end
+
+  return vim.split(out, "\n", { plain = true })
+end
+
+--- revision the file buffers are currently diffed against; the branch review
+--- and a commit review set different ones
+--- @param base? string
+--- @return string?
+function M.active(base)
+  if base then
+    state.active = base
+  end
+  return state.active
+end
+
 function M.forget()
-  state.base, state.branch = nil, nil
+  state.base, state.branch, state.active = nil, nil, nil
 end
 
 return M

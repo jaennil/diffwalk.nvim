@@ -15,6 +15,7 @@ lazy-lock.json  +15 -11
 
 - **Branch review** — every hunk between the merge base with the default branch and your working tree. The merge base, not the branch tip, so commits that landed upstream after you branched stay out.
 - **Commit review** — pick a commit from a list, walk its own diff, come back, pick the next one.
+- **Reading what was removed** — deleted lines are drawn as virtual lines, and the cursor cannot enter virtual text. `:DiffwalkOld` opens the file as it was at the base in a real buffer next to it, both sides in diff mode, so a removed signature can be walked, searched and yanked.
 - **Two colors, everywhere** — green for what the change adds, red for what it removes, in the line background, in the word diff and in the sign column.
 
 ## Requirements
@@ -34,6 +35,7 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
   keys = {
     { "<leader>mh", "<CMD>DiffwalkBranch<CR>", desc = "Walk the branch diff" },
     { "<leader>mc", "<CMD>DiffwalkCommits<CR>", desc = "Walk the diff of a commit" },
+    { "<leader>mo", "<CMD>DiffwalkOld<CR>", desc = "Open the base version of the file" },
     { "<leader>md", "<CMD>DiffwalkToggleDeleted<CR>", desc = "Toggle deleted lines" },
     { "<leader>mB", "<CMD>DiffwalkReset<CR>", desc = "Reset the diff base" },
   },
@@ -50,6 +52,7 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 | `:DiffwalkCommits [n]` | Pick a commit and walk its diff (default 100 commits) |
 | `:DiffwalkCommit {rev}` | Walk one commit's diff directly |
 | `:DiffwalkFiles` | Changed files of the branch in the quickfix list |
+| `:DiffwalkOld` | Open the base version of the file beside it, in diff mode |
 | `:DiffwalkToggleDeleted` | Show or hide removed lines in the file |
 | `:DiffwalkReset` | Drop the diff base and every highlight it turned on |
 
@@ -77,6 +80,7 @@ require("diffwalk").setup({
   height = 15,
   position = "botright",
 
+  vertical = true,   -- :DiffwalkOld splits vertically
   linehl = true,     -- paint the whole line, not just the sign
   deleted = true,    -- show removed lines as virtual lines
   word_diff = true,  -- highlight the changed regions inside a line
@@ -114,7 +118,8 @@ colors = { added = "#1d2214", removed = "#2d2220", ... }
 ## Caveats
 
 - `<CR>` opens the **current** version of the file. For a branch review that's exact; for an old commit the line numbers drift as far as the file has moved since.
-- Removed lines are virtual lines — they push the real code down. `:DiffwalkToggleDeleted` turns them off.
+- Removed lines are virtual lines — they push the real code down. `:DiffwalkToggleDeleted` turns them off, `:DiffwalkOld` gives you a buffer to walk them in.
+- The buffer `:DiffwalkOld` opens is not a file on disk: treesitter highlights it, but no LSP attaches to it.
 
 ## License
 

@@ -51,6 +51,18 @@ a single commit against its parent.
 :DiffwalkFiles          Put the changed files of the branch in the quickfix
                         list and set the diff base.
 
+                                                                 *:DiffwalkOld*
+                                                                *diffwalk-old*
+:DiffwalkOld            Open the current file as it looks at the diff base, in
+                        a split beside it, with both sides in diff mode.
+
+                        Removed lines are virtual lines and virtual text
+                        cannot hold the cursor, so this is how a deleted
+                        function signature gets read, searched or yanked. The
+                        buffer is not a file on disk: treesitter highlights
+                        it, but no LSP attaches. |diffwalk-config| `keys.close`
+                        closes it and turns diff mode off again.
+
                                                        *:DiffwalkToggleDeleted*
 :DiffwalkToggleDeleted  Show or hide removed lines in the file buffers. They
                         are virtual lines, so they push real code down.
@@ -93,6 +105,7 @@ setup() is optional. Defaults: >
       linehl = true,
       deleted = true,
       word_diff = true,
+      vertical = true,
 
       colors = {
         added = "#005f00",
@@ -131,6 +144,8 @@ colors          The defaults are the saturated 256-color diff palette, not the
                 word diff is flattened to the line color, since there it would
                 only cover ragged chunks of leading whitespace.
 
+vertical        Whether :DiffwalkOld splits vertically.
+
 keys            Set an entry to false or "" to leave it unmapped.
 
 ==============================================================================
@@ -148,6 +163,9 @@ require("diffwalk").commits([limit])
                                                             *diffwalk.commit()*
 require("diffwalk").commit({rev} [, {back}])
                         {back} is called when <BS> is pressed in the panel.
+
+                                                               *diffwalk.old()*
+require("diffwalk").old()
 
                                                     *diffwalk.toggle_deleted()*
 require("diffwalk").toggle_deleted()

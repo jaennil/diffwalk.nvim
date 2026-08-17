@@ -48,6 +48,7 @@ function M.enable(base)
   local gitsigns = require("gitsigns")
   local opts = config.options
 
+  require("diffwalk.git").active(base)
   M.palette()
   gitsigns.change_base(base, true)
   gitsigns.toggle_linehl(opts.linehl)

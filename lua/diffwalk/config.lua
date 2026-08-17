@@ -18,6 +18,7 @@ local M = {}
 --- @field linehl boolean paint the whole line, not just the sign
 --- @field deleted boolean show removed lines as virtual lines
 --- @field word_diff boolean highlight the changed regions inside a line
+--- @field vertical boolean open the base version of a file in a vertical split
 --- @field colors DiffwalkColors
 --- @field keys table<string, string>
 local defaults = {
@@ -32,6 +33,7 @@ local defaults = {
   linehl = true,
   deleted = true,
   word_diff = true,
+  vertical = true,
 
   -- most themes keep their diff colors a few shades above the background,
   -- which barely reads as green or red; these are deliberately saturated

@@ -102,6 +102,12 @@ function M.commits(limit)
   panel.map(buf, keys.close, "<CMD>close<CR>", "Close the commit list")
 end
 
+--- open the version of the current file the diff is against, side by side, so
+--- the cursor can walk the removed lines; see |diffwalk-old|
+function M.old()
+  return require("diffwalk.old").open()
+end
+
 --- show or hide the removed lines in the file buffers
 function M.toggle_deleted()
   return highlight.toggle_deleted()
@@ -111,6 +117,7 @@ end
 function M.reset()
   git.forget()
   highlight.disable()
+  vim.cmd("diffoff!")
 end
 
 return M
