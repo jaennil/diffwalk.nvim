@@ -9,7 +9,7 @@ local MARK = "\u{2713} "
 --- @param diff string output of git diff
 --- @return table[] files
 function M.parse(diff)
-  local files, file, hunk, lnum = {}, nil, nil, nil
+  local files, file, hunk, lnum, run = {}, nil, nil, nil, nil
 
   for _, line in ipairs(vim.split(diff, "\n", { plain = true })) do
     local old = line:match("^%-%-%- a/(.*)$")
@@ -18,7 +18,7 @@ function M.parse(diff)
     local kind = line:sub(1, 1)
 
     if line:match("^diff %-%-git ") then
-      file, hunk = nil, nil
+      file, hunk, run = nil, nil, nil
     elseif old then
       file = { path = old, added = 0, removed = 0, hunks = {} }
     elseif new or line == "+++ /dev/null" then
@@ -29,9 +29,14 @@ function M.parse(diff)
       lnum = tonumber(start)
       -- lines carries the added lines only, so marking a viewed hunk in the
       -- file never dims the context around it
-      hunk = { lnum = lnum, first = lnum, lines = {}, deleted = {}, added = 0, removed = 0 }
+      -- deletions are kept as runs, each anchored where it sits in the new
+      -- file: a hunk interleaves - and +, and collapsing them into one block
+      -- would show every removal before every addition
+      hunk = { lnum = lnum, first = lnum, lines = {}, deletions = {}, added = 0, removed = 0 }
+      run = nil
       table.insert(file.hunks, hunk)
     elseif hunk and kind == "+" then
+      run = nil
       file.added, hunk.added = file.added + 1, hunk.added + 1
       table.insert(hunk.lines, lnum)
       if not hunk.text then
@@ -41,12 +46,19 @@ function M.parse(diff)
     elseif hunk and kind == "-" then
       file.removed, hunk.removed = file.removed + 1, hunk.removed + 1
       hunk.first = math.min(hunk.first, lnum)
-      hunk.deleted_at = hunk.deleted_at or lnum -- where the removal happened
-      table.insert(hunk.deleted, line:sub(2))
+      hunk.deleted_at = hunk.deleted_at or lnum -- where the first removal was
+
+      if not run then
+        run = { at = lnum, lines = {} }
+        table.insert(hunk.deletions, run)
+      end
+
+      table.insert(run.lines, line:sub(2))
       if not hunk.text then
         hunk.lnum, hunk.sign, hunk.text = lnum, "-", vim.trim(line:sub(2))
       end
     elseif hunk and kind == " " then
+      run = nil
       lnum = lnum + 1
     end
   end

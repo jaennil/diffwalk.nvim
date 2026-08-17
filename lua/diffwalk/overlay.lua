@@ -80,23 +80,30 @@ function M.refresh(bufnr)
   for _, hunk in ipairs(file.hunks) do
     local seen = viewed.has(viewed.key(current.base, path, hunk.lnum))
 
-    -- what the change removed, above the line that replaced it
-    if show_deleted and #hunk.deleted > 0 then
+    -- each run of removed lines sits above the line that took its place, so
+    -- the order of the hunk survives instead of every deletion bunching up
+    if show_deleted then
       local hl = seen and "DiffwalkViewed" or "DiffwalkRemoved"
-      local virt = {}
 
-      for _, text in ipairs(hunk.deleted) do
-        local expanded = expand_tabs(text, tabstop)
-        expanded = expanded .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(expanded), 0))
-        table.insert(virt, { { expanded, hl } })
+      for _, run in ipairs(hunk.deletions) do
+        local virt = {}
+
+        for _, text in ipairs(run.lines) do
+          local expanded = expand_tabs(text, tabstop)
+          expanded = expanded .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(expanded), 0))
+          table.insert(virt, { { expanded, hl } })
+        end
+
+        -- a run past the end of the file hangs under the last line instead
+        local above = run.at <= last
+        local anchor = math.min(math.max(run.at, 1), last)
+
+        vim.api.nvim_buf_set_extmark(bufnr, ns, anchor - 1, 0, {
+          virt_lines = virt,
+          virt_lines_above = above,
+          priority = 1000,
+        })
       end
-
-      local anchor = math.min(math.max(hunk.deleted_at or hunk.first, 1), last)
-      vim.api.nvim_buf_set_extmark(bufnr, ns, anchor - 1, 0, {
-        virt_lines = virt,
-        virt_lines_above = true,
-        priority = 1000,
-      })
     end
 
     -- the added lines: painted here rather than left to gitsigns, which
