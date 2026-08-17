@@ -62,8 +62,8 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 | Key | Action |
 | --- | --- |
-| `<CR>` | Open the hunk and move there |
-| `o` | Open it, keep the cursor in the list |
+| `<CR>` | Show the hunk, cursor stays in the list |
+| `o` | Show it and jump into the file |
 | `]f` / `[f` | Next / previous file |
 | `x` | Mark the hunk as viewed; on a file line, the whole file |
 | `a` | Toggle between all hunks and only the unviewed ones |
@@ -100,7 +100,7 @@ require("diffwalk").setup({
 
   keys = {
     open = "<CR>",
-    preview = "o",
+    focus = "o",
     next_file = "]f",
     prev_file = "[f",
     mark = "x",

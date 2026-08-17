@@ -82,8 +82,8 @@ kind of the first change and its text: >
 <
 Default mappings inside the panel:
 
-    <CR>        open the hunk and move there
-    o           open it, keep the cursor in the list
+    <CR>        show the hunk, the cursor stays in the list
+    o           show the hunk and jump into the file
     ]f          next file
     [f          previous file
     x           mark as viewed; on a file line, the whole file
@@ -134,7 +134,7 @@ setup() is optional. Defaults: >
 
       keys = {
         open = "<CR>",
-        preview = "o",
+        focus = "o",
         next_file = "]f",
         prev_file = "[f",
         mark = "x",

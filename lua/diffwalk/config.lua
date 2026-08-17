@@ -48,7 +48,7 @@ local defaults = {
 
   keys = {
     open = "<CR>",
-    preview = "o",
+    focus = "o",
     next_file = "]f",
     prev_file = "[f",
     mark = "x",
