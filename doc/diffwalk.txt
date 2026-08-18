@@ -112,6 +112,11 @@ background, which left a file showing up uncolored for a moment after it was
 opened, and it does not attach at all to a file that is absent from the base,
 which left a newly added file looking unchanged.
 
+What is painted comes from the hunks gitsigns holds for the buffer, which it
+keeps in step as the buffer is edited, so the highlights follow the code
+rather than a snapshot taken when the review started. A file gitsigns will
+not attach to falls back on that snapshot.
+
 A marked hunk is dimmed in the file as well: its changed lines drop from the
 review palette to `DiffwalkViewed` and get a check mark in the sign column,
 drawn above the gitsigns ones. Only the changed lines are dimmed, never the
@@ -119,8 +124,13 @@ context around them; deleted lines stay red, since those are virtual lines and
 the check mark beside them is the marker.
 
 Marking is manual: `x` on a hunk line, or on a file line for all of its hunks.
-The marks are keyed by file and line for the session only: |:DiffwalkReset|
-drops them, and they stop matching once the hunks move under them.
+
+A mark is keyed by the diff base, the file and a hash of the hunk's own patch
+text, never by its line number: line numbers move as soon as anything above
+them is edited. The marks are written to stdpath("state")/diffwalk, one file
+per repository, so a review survives closing Neovim. Editing a hunk that was
+marked makes it a different hunk, and it comes back unmarked.
+|:DiffwalkReset| drops them.
 
 ==============================================================================
 5. CONFIGURATION                                               *diffwalk-config*
@@ -141,6 +151,7 @@ setup() is optional. Defaults: >
       word_diff = true,
       vertical = true,
       edges = true,
+      persist = true,
 
       colors = {
         added = "#005f00",
@@ -199,6 +210,8 @@ edges           Whether a hunk is bracketed in the sign column as `┌ │ └`
                 signs and the fold column. That width is worked out rather
                 than read back, because with signcolumn=auto the column is
                 still empty at the moment the marks are placed.
+
+persist         Whether the viewed marks are kept on disk between sessions.
 
 position        Where the panel goes: "right", "left", "bottom" or "top".
 

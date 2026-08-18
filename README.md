@@ -17,7 +17,8 @@ Most diff viewers put the change in a separate buffer, where your LSP, your jump
 - **Branch review** — every hunk between the merge base with the default branch and your working tree. The merge base, not the branch tip, so commits that landed upstream after you branched stay out.
 - **Commit review** — pick a commit from a list, walk its own diff, come back, pick the next one.
 - **Reading what was removed** — deleted lines are drawn as virtual lines, and the cursor cannot enter virtual text. `:DiffwalkOld` opens the file as it was at the base in a real buffer next to it, both sides in diff mode, so a removed signature can be walked, searched and yanked.
-- **Keeping track** — mark a hunk (or a whole file) as viewed, and it dims in both places at once: in the list, and in the file itself, where it drops out of the loud green and picks up a `✓` in the sign column. What is still bright is what is left to read.
+- **Keeping track** — mark a hunk (or a whole file) as viewed, and it dims in both places at once: in the list, and in the file itself, where it drops out of the loud green and picks up a `✓` in the sign column. What is still bright is what is left to read. Marks are keyed by the hunk's own content, not its line number, so they hold as the file moves and are kept on disk between sessions.
+- **Live** — the highlights follow gitsigns, which rediffs as you type, so editing a file during a review moves the hunks under your feet without the colors drifting off them.
 - **Two colors, everywhere** — green for what the change adds, red for what it removes, in the line background, in the word diff and in the sign column.
 - **Hunk brackets** — each hunk is drawn as `┌ │ └` in the gutter, next to the line numbers, so where one ends and the next begins is obvious without a separator row cutting through the code. The bracket covers the removed lines too, even though virtual lines have no sign column of their own.
 - **No waiting for the color** — diffwalk paints the added lines itself from the diff it already has, instead of leaving the file uncolored until gitsigns finishes diffing in the background.
@@ -89,6 +90,7 @@ require("diffwalk").setup({
 
   vertical = true,   -- :DiffwalkOld splits vertically
   edges = true,      -- ┌ │ └ brackets rather than a plain bar
+  persist = true,    -- keep the viewed marks between sessions
   linehl = true,     -- paint the whole line, not just the sign
   deleted = true,    -- show removed lines as virtual lines
   word_diff = true,  -- highlight the changed regions inside a line
@@ -132,7 +134,7 @@ colors = { added = "#1d2214", removed = "#2d2220", ... }
 - `<CR>` opens the **current** version of the file. For a branch review that's exact; for an old commit the line numbers drift as far as the file has moved since.
 - Removed lines are virtual lines — they push the real code down. `:DiffwalkToggleDeleted` turns them off, `:DiffwalkOld` gives you a buffer to walk them in.
 - Only the changed lines of a viewed hunk are dimmed, never the context around them.
-- Viewed marks live in memory for the session and are keyed by file and line, so they are dropped by `:DiffwalkReset` and stop matching once the hunks move under them.
+- Viewed marks are stored under `stdpath("state")/diffwalk`, one file per repository, and keyed by the diff base and the hunk's content: editing a hunk you already marked makes it a different hunk, and it comes back unmarked. `:DiffwalkReset` drops them.
 - The buffer `:DiffwalkOld` opens is not a file on disk: treesitter highlights it, but no LSP attaches to it.
 
 ## License

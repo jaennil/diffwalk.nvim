@@ -3,6 +3,7 @@ local diff = require("diffwalk.diff")
 local git = require("diffwalk.git")
 local highlight = require("diffwalk.highlight")
 local overlay = require("diffwalk.overlay")
+local viewed = require("diffwalk.viewed")
 local panel = require("diffwalk.panel")
 
 local M = {}
@@ -30,6 +31,8 @@ function M.branch()
   end
 
   highlight.enable(base)
+
+  viewed.load(git.root())
 
   local files = diff.parse(out)
   overlay.set(base, files)
@@ -73,6 +76,8 @@ function M.commit(rev, back)
   end
 
   highlight.enable(parent)
+
+  viewed.load(git.root())
 
   local files = diff.parse(out)
   overlay.set(parent, files)
@@ -118,7 +123,7 @@ end
 
 --- drop the diff base and every highlight it turned on
 function M.reset()
-  require("diffwalk.viewed").clear()
+  viewed.clear()
   overlay.clear()
   git.forget()
   highlight.disable()
