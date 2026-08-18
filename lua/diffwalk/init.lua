@@ -36,7 +36,9 @@ function M.branch()
 
   local files = diff.parse(out)
   overlay.set(base, files)
-  panel.hunks(base:sub(1, 7), files, base)
+  panel.hunks(base:sub(1, 7), function()
+    return diff.snapshot(base)
+  end, base)
 end
 
 --- changed files of the branch in the quickfix list
@@ -81,7 +83,9 @@ function M.commit(rev, back)
 
   local files = diff.parse(out)
   overlay.set(parent, files)
-  panel.hunks(rev, files, parent, back)
+  panel.hunks(rev, function()
+    return files -- a commit does not change under you
+  end, parent, back)
 end
 
 --- pick a commit, then walk its diff; <CR> drills in, <BS> comes back here

@@ -108,6 +108,39 @@ function M.buffer(bufnr, base, path)
   return files[1] and files[1].hunks or {}
 end
 
+--- Every changed file against the base. A file with a buffer open is diffed
+--- from the buffer, so the list matches what the highlights show, unsaved
+--- edits included; the rest come from `git diff`.
+--- @param base string
+--- @return table[] files
+function M.snapshot(base)
+  local out = git.run({ "git", "diff", "--no-color", base })
+  if not out then
+    return {}
+  end
+
+  local files = M.parse(out)
+  local root = git.root()
+
+  for _, file in ipairs(files) do
+    local bufnr = vim.fn.bufnr("^" .. root .. "/" .. file.path .. "$")
+
+    if bufnr > 0 and vim.api.nvim_buf_is_loaded(bufnr) then
+      local hunks = M.buffer(bufnr, base, file.path)
+
+      if hunks then
+        file.hunks, file.added, file.removed = hunks, 0, 0
+
+        for _, hunk in ipairs(hunks) do
+          file.added, file.removed = file.added + hunk.added, file.removed + hunk.removed
+        end
+      end
+    end
+  end
+
+  return files
+end
+
 --- one line per file, one per hunk; targets[line] is where <CR> jumps.
 --- Hunks already looked at carry a check mark and are dimmed, and can be left
 --- out entirely.

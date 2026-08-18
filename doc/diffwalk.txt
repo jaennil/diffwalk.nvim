@@ -81,6 +81,12 @@ a single commit against its parent.
 ==============================================================================
 4. PANEL                                                        *diffwalk-panel*
 
+The list is a view of the diff rather than a snapshot of it: it is rebuilt
+when a buffer settles after an edit, so line numbers, counts and newly created
+hunks stay right. A file with a buffer open is diffed from the buffer, unsaved
+edits included; the rest come from `git diff`. A commit's diff is fixed and is
+never refetched.
+
 A file line carries the path and the counts, a hunk line the line number, the
 kind of the first change and its text: >
 

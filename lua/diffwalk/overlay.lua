@@ -299,6 +299,11 @@ function M.schedule(bufnr)
   vim.defer_fn(function()
     pending[bufnr] = nil
     M.refresh(bufnr)
+
+    local panel = require("diffwalk.panel")
+    if panel.active then
+      panel.active(true)
+    end
   end, 250)
 end
 

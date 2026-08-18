@@ -2,6 +2,10 @@ local config = require("diffwalk.config")
 
 local M = {}
 
+--- redraw of the list currently on screen, if there is one
+--- @type fun(refetch?: boolean)?
+M.active = nil
+
 local ns = vim.api.nvim_create_namespace("diffwalk")
 local NAME = "diffwalk://"
 
@@ -105,21 +109,31 @@ end
 --- a hunk list: jumping into the file, walking files, marking what has been
 --- looked at, hiding it, going back, closing
 --- @param name string
---- @param files table[] as returned by diff.parse
+--- @param provider fun(): table[] the files to list, called again on refresh
 --- @param base string revision the diff is against
 --- @param back? function what <BS> returns to
-function M.hunks(name, files, base, back)
+function M.hunks(name, provider, base, back)
   local diff = require("diffwalk.diff")
   local viewed = require("diffwalk.viewed")
   local opts = config.options
   local keys = opts.keys
 
   local hide = false
+  local files = provider()
   local lines, marks, targets = diff.render(files, base, hide)
   local buf, list, origin = M.open(name, lines, marks)
 
-  local function redraw()
+  local function redraw(refetch)
+    if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_win_is_valid(list) then
+      M.active = nil
+      return
+    end
+
     local cursor = vim.api.nvim_win_get_cursor(list)
+
+    if refetch then
+      files = provider()
+    end
 
     lines, marks, targets = diff.render(files, base, hide)
 
@@ -228,6 +242,10 @@ function M.hunks(name, files, base, back)
   if back then
     M.map(buf, keys.back, back, "Back to the commit list")
   end
+
+  -- the list is a view of the diff, not a snapshot of it: an edit anywhere
+  -- has to reach it as well
+  M.active = redraw
 
   return buf
 end
