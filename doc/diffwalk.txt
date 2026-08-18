@@ -112,10 +112,11 @@ background, which left a file showing up uncolored for a moment after it was
 opened, and it does not attach at all to a file that is absent from the base,
 which left a newly added file looking unchanged.
 
-What is painted comes from the hunks gitsigns holds for the buffer, which it
-keeps in step as the buffer is edited, so the highlights follow the code
-rather than a snapshot taken when the review started. A file gitsigns will
-not attach to falls back on that snapshot.
+The hunks are diffed from the buffer contents against the base on every
+refresh, so unsaved edits count and the highlights follow the code rather than
+a snapshot taken when the review started. The panel parses `git diff` with the
+same code: one source, so a hunk marked in the panel is the same hunk in the
+file. A file the base does not have falls back on the snapshot.
 
 A marked hunk is dimmed in the file as well: its changed lines drop from the
 review palette to `DiffwalkViewed` and get a check mark in the sign column,
@@ -203,7 +204,12 @@ edges           Whether a hunk is bracketed in the sign column as `┌ │ └`
                 are turned off while a review is on, so the two never fight
                 over it.
 
-                The bracket runs through the removed lines as well. Those are
+                The bracket covers the whole span of a hunk, from its first
+                changed line to its last, context lines in the middle
+                included, so it reads as one shape rather than breaking up
+                wherever a hunk holds unchanged lines.
+
+                It runs through the removed lines as well. Those are
                 virtual lines, which have no sign column, so their gutter is
                 drawn as part of the line and padded to the width the real
                 one takes: the count of the number column, two columns for the

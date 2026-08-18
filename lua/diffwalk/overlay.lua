@@ -120,11 +120,11 @@ function M.refresh(bufnr)
     return
   end
 
-  -- gitsigns keeps its hunks in step with the buffer, edits included, so they
-  -- are the truth here; the snapshot taken when the review started is only
-  -- for a file gitsigns will not attach to, being absent from the base
+  -- diffed against the base on every refresh, so edits to the buffer are
+  -- reflected; the snapshot from when the review started is the fallback for
+  -- a file the base does not have at all
   local snapshot = current.files[path]
-  local hunks = diff.live(bufnr)
+  local hunks = diff.buffer(bufnr, current.base, path)
 
   if not hunks then
     if not snapshot then
@@ -178,45 +178,37 @@ function M.refresh(bufnr)
       end
     end
 
-    -- every line of the hunk in the order it appears on screen, deleted ones
-    -- included, so the bracket runs through the whole of it
-    local order, positions, taken = {}, {}, {}
-    for _, line in ipairs(hunk.lines) do
-      if not taken[line] then
-        taken[line], positions[#positions + 1] = true, line
-      end
-    end
-    for at in pairs(runs) do
-      if not taken[at] then
-        taken[at], positions[#positions + 1] = true, at
-      end
-    end
-    table.sort(positions)
-
     local added = {}
     for _, line in ipairs(hunk.lines) do
       added[line] = true
     end
 
-    for _, position in ipairs(positions) do
-      local run = runs[position]
-      if run then
-        for _ = 1, #run.lines do
-          order[#order + 1] = { deleted = true, at = position }
-        end
-      end
-      if added[position] then
-        order[#order + 1] = { line = position }
-      end
+    -- the span the hunk covers in this buffer, first changed line to last:
+    -- the bracket is drawn over all of it, context lines in the middle
+    -- included, so it reads as one shape instead of breaking up
+    local from, to = math.huge, 0
+    for _, line in ipairs(hunk.lines) do
+      from, to = math.min(from, line), math.max(to, line)
+    end
+    for at in pairs(runs) do
+      from, to = math.min(from, at), math.max(to, at - 1)
     end
 
-    local total = #order
+    from = math.min(math.max(from, 1), last)
+    to = math.min(math.max(to, 0), last)
+
+    local virt_count = 0
+    for _, run in ipairs(hunk.deletions) do
+      virt_count = virt_count + #run.lines
+    end
+
+    local total = virt_count + math.max(to - from + 1, 0)
     local index = 0
 
-    -- the deleted runs, each above the line that took its place
-    for _, position in ipairs(positions) do
+    for position = from, math.max(to, from - 1) do
       local run = runs[position]
 
+      -- what the change removed, above the line that took its place
       if run then
         local hl = seen and "DiffwalkViewed" or "DiffwalkRemoved"
         local virt = {}
@@ -239,27 +231,43 @@ function M.refresh(bufnr)
           end
         end
 
-        -- a run past the end of the file hangs under the last line instead
-        local above = run.at <= last
-        local anchor = math.min(math.max(run.at, 1), last)
-
-        vim.api.nvim_buf_set_extmark(bufnr, ns, anchor - 1, 0, {
+        vim.api.nvim_buf_set_extmark(bufnr, ns, position - 1, 0, {
           virt_lines = virt,
-          virt_lines_above = above,
+          virt_lines_above = true,
           virt_lines_leftcol = true,
           priority = 1000,
         })
       end
 
-      -- the added lines: painted here rather than left to gitsigns, which
-      -- diffs asynchronously and would let the file show up uncolored first
-      if added[position] and position <= last then
-        index = index + 1
+      index = index + 1
 
-        vim.api.nvim_buf_set_extmark(bufnr, ns, position - 1, 0, {
-          line_hl_group = seen and "DiffwalkViewed" or "DiffwalkAdded",
-          sign_text = (seen and index == 1) and "\u{2713} " or (bracket(index, total) .. " "),
-          sign_hl_group = sign_hl,
+      vim.api.nvim_buf_set_extmark(bufnr, ns, position - 1, 0, {
+        -- only the changed lines are painted; the context between them keeps
+        -- its own background and just carries the bracket
+        line_hl_group = added[position] and (seen and "DiffwalkViewed" or "DiffwalkAdded") or nil,
+        sign_text = (seen and index == 1) and "\u{2713} " or (bracket(index, total) .. " "),
+        sign_hl_group = sign_hl,
+        priority = 1000,
+      })
+    end
+
+    -- deletions past the end of the buffer have no line to hang above
+    for at, run in pairs(runs) do
+      if at > last then
+        local hl = seen and "DiffwalkViewed" or "DiffwalkRemoved"
+        local virt = {}
+
+        for _, text in ipairs(run.lines) do
+          local expanded = expand_tabs(text, tabstop)
+          local gutter = bracket(total, total) .. " "
+          gutter = gutter .. string.rep(" ", math.max(textoff - vim.fn.strdisplaywidth(gutter), 0))
+          expanded = expanded .. string.rep(" ", math.max(width - vim.fn.strdisplaywidth(expanded), 0))
+          table.insert(virt, { { gutter, sign_hl }, { expanded, hl } })
+        end
+
+        vim.api.nvim_buf_set_extmark(bufnr, ns, math.max(last - 1, 0), 0, {
+          virt_lines = virt,
+          virt_lines_leftcol = true,
           priority = 1000,
         })
       end

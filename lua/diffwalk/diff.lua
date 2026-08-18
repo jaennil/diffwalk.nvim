@@ -77,72 +77,35 @@ function M.id(hunk)
   return vim.fn.sha256(table.concat(hunk.patch, "\n")):sub(1, 16)
 end
 
---- the hunks gitsigns has for a buffer, which it keeps up to date as the
---- buffer is edited, in the shape the rest of diffwalk expects
+--- Hunks of one buffer against the base, diffed here rather than taken from
+--- gitsigns: the panel parses `git diff` with the same code, and two diff
+--- sources group hunks differently, which made a hunk marked in the panel a
+--- different hunk in the file. Runs on the buffer contents, so unsaved edits
+--- count too.
 --- @param bufnr integer
+--- @param base string
+--- @param path string relative to the repo root
 --- @return table[]?
-function M.live(bufnr)
-  local ok, gitsigns = pcall(require, "gitsigns")
-  if not ok then
+function M.buffer(bufnr, base, path)
+  local before = git.show(base, path)
+  if not before then
     return nil
   end
 
-  local raw = gitsigns.get_hunks(bufnr)
-  if not raw then
-    return nil
+  local after = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local unified = vim.diff(table.concat(before, "\n") .. "\n", table.concat(after, "\n") .. "\n", {
+    result_type = "unified",
+    ctxlen = 3,
+  })
+
+  if type(unified) ~= "string" or unified == "" then
+    return {}
   end
 
-  local hunks = {}
+  -- the parser wants a file header, and this output has none
+  local files = M.parse("--- a/" .. path .. "\n+++ b/" .. path .. "\n" .. unified)
 
-  for _, entry in ipairs(raw) do
-    local lnum = entry.added.start
-    local hunk = {
-      lnum = lnum,
-      first = lnum,
-      lines = {},
-      deletions = {},
-      patch = {},
-      added = 0,
-      removed = 0,
-    }
-    local run = nil
-
-    for _, line in ipairs(entry.lines or {}) do
-      local kind, text = line:sub(1, 1), line:sub(2)
-
-      if kind == "+" then
-        run = nil
-        hunk.added = hunk.added + 1
-        table.insert(hunk.lines, lnum)
-        table.insert(hunk.patch, line)
-        if not hunk.text then
-          hunk.lnum, hunk.sign, hunk.text = lnum, "+", vim.trim(text)
-        end
-        lnum = lnum + 1
-      elseif kind == "-" then
-        hunk.removed = hunk.removed + 1
-        hunk.deleted_at = hunk.deleted_at or lnum
-
-        if not run then
-          run = { at = lnum, lines = {} }
-          table.insert(hunk.deletions, run)
-        end
-
-        table.insert(run.lines, text)
-        table.insert(hunk.patch, line)
-        if not hunk.text then
-          hunk.lnum, hunk.sign, hunk.text = lnum, "-", vim.trim(text)
-        end
-      else
-        run = nil
-        lnum = lnum + 1
-      end
-    end
-
-    table.insert(hunks, hunk)
-  end
-
-  return hunks
+  return files[1] and files[1].hunks or {}
 end
 
 --- one line per file, one per hunk; targets[line] is where <CR> jumps.
