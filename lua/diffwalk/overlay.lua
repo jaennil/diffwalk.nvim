@@ -2,6 +2,7 @@
 --- the same, so a hunk already looked at is dimmed back down here and given a
 --- check mark of its own.
 local config = require("diffwalk.config")
+local diff = require("diffwalk.diff")
 local git = require("diffwalk.git")
 local viewed = require("diffwalk.viewed")
 
@@ -115,10 +116,24 @@ function M.refresh(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 
   local path = current.base and relpath(bufnr)
-  local file = path and current.files[path]
-  if not file then
+  if not path then
     return
   end
+
+  -- gitsigns keeps its hunks in step with the buffer, edits included, so they
+  -- are the truth here; the snapshot taken when the review started is only
+  -- for a file gitsigns will not attach to, being absent from the base
+  local snapshot = current.files[path]
+  local hunks = diff.live(bufnr)
+
+  if not hunks then
+    if not snapshot then
+      return
+    end
+    hunks = snapshot.hunks
+  end
+
+  local file = { hunks = hunks, absent = snapshot and snapshot.absent or false }
 
   local last = vim.api.nvim_buf_line_count(bufnr)
 
@@ -153,7 +168,7 @@ function M.refresh(bufnr)
   end
 
   for _, hunk in ipairs(file.hunks) do
-    local seen = viewed.has(viewed.key(current.base, path, hunk.lnum))
+    local seen = viewed.has(viewed.key(current.base, path, diff.id(hunk)))
     local sign_hl = seen and "DiffwalkViewedSign" or "DiffwalkAddedSign"
 
     local runs = {}
@@ -263,6 +278,22 @@ function M.refresh(bufnr)
   end
 end
 
+local pending = {}
+
+--- redraw after the dust settles, rather than on every keystroke
+--- @param bufnr integer
+function M.schedule(bufnr)
+  if pending[bufnr] then
+    return
+  end
+
+  pending[bufnr] = true
+  vim.defer_fn(function()
+    pending[bufnr] = nil
+    M.refresh(bufnr)
+  end, 250)
+end
+
 function M.refresh_all()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     M.refresh(bufnr)
@@ -297,6 +328,16 @@ function M.set(base, files)
     desc = "diffwalk: rewrap the deleted lines for the new width",
     callback = function()
       M.refresh_all()
+    end,
+  })
+
+  -- edits move the hunks under the marks: follow gitsigns, which has already
+  -- rediffed by the time this settles
+  vim.api.nvim_create_autocmd({ "TextChanged", "InsertLeave", "BufWritePost" }, {
+    group = group,
+    desc = "diffwalk: follow the buffer as it is edited",
+    callback = function(args)
+      M.schedule(args.buf)
     end,
   })
 

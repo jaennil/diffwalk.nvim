@@ -1,16 +1,15 @@
---- Which hunks have already been looked at, per diff base. Kept in memory for
---- the session: a review is something you finish, and the keys stop matching
---- as soon as the files move under them anyway.
+--- Which hunks have already been looked at, keyed by the diff base, the file
+--- and the hunk's own content, so a mark stays on its hunk as the file moves.
 local M = {}
 
 local seen = {}
 
 --- @param base string
 --- @param path string relative to the repo root
---- @param lnum integer
+--- @param id string hash of the hunk's patch text
 --- @return string
-function M.key(base, path, lnum)
-  return ("%s\0%s:%d"):format(base, path, lnum)
+function M.key(base, path, id)
+  return ("%s\0%s\0%s"):format(base, path, id)
 end
 
 --- @param key string

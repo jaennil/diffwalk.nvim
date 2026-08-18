@@ -32,13 +32,14 @@ function M.parse(diff)
       -- deletions are kept as runs, each anchored where it sits in the new
       -- file: a hunk interleaves - and +, and collapsing them into one block
       -- would show every removal before every addition
-      hunk = { lnum = lnum, first = lnum, lines = {}, deletions = {}, added = 0, removed = 0 }
+      hunk = { lnum = lnum, first = lnum, lines = {}, deletions = {}, patch = {}, added = 0, removed = 0 }
       run = nil
       table.insert(file.hunks, hunk)
     elseif hunk and kind == "+" then
       run = nil
       file.added, hunk.added = file.added + 1, hunk.added + 1
       table.insert(hunk.lines, lnum)
+      table.insert(hunk.patch, line)
       if not hunk.text then
         hunk.lnum, hunk.sign, hunk.text = lnum, "+", vim.trim(line:sub(2))
       end
@@ -54,6 +55,7 @@ function M.parse(diff)
       end
 
       table.insert(run.lines, line:sub(2))
+      table.insert(hunk.patch, line)
       if not hunk.text then
         hunk.lnum, hunk.sign, hunk.text = lnum, "-", vim.trim(line:sub(2))
       end
@@ -64,6 +66,83 @@ function M.parse(diff)
   end
 
   return files
+end
+
+--- Identity of a hunk: the text it changes, not where it sits. Line numbers
+--- move as soon as anything above them is edited, and a viewed mark keyed by
+--- them would drift off the hunk it belongs to and never survive a restart.
+--- @param hunk table
+--- @return string
+function M.id(hunk)
+  return vim.fn.sha256(table.concat(hunk.patch, "\n")):sub(1, 16)
+end
+
+--- the hunks gitsigns has for a buffer, which it keeps up to date as the
+--- buffer is edited, in the shape the rest of diffwalk expects
+--- @param bufnr integer
+--- @return table[]?
+function M.live(bufnr)
+  local ok, gitsigns = pcall(require, "gitsigns")
+  if not ok then
+    return nil
+  end
+
+  local raw = gitsigns.get_hunks(bufnr)
+  if not raw then
+    return nil
+  end
+
+  local hunks = {}
+
+  for _, entry in ipairs(raw) do
+    local lnum = entry.added.start
+    local hunk = {
+      lnum = lnum,
+      first = lnum,
+      lines = {},
+      deletions = {},
+      patch = {},
+      added = 0,
+      removed = 0,
+    }
+    local run = nil
+
+    for _, line in ipairs(entry.lines or {}) do
+      local kind, text = line:sub(1, 1), line:sub(2)
+
+      if kind == "+" then
+        run = nil
+        hunk.added = hunk.added + 1
+        table.insert(hunk.lines, lnum)
+        table.insert(hunk.patch, line)
+        if not hunk.text then
+          hunk.lnum, hunk.sign, hunk.text = lnum, "+", vim.trim(text)
+        end
+        lnum = lnum + 1
+      elseif kind == "-" then
+        hunk.removed = hunk.removed + 1
+        hunk.deleted_at = hunk.deleted_at or lnum
+
+        if not run then
+          run = { at = lnum, lines = {} }
+          table.insert(hunk.deletions, run)
+        end
+
+        table.insert(run.lines, text)
+        table.insert(hunk.patch, line)
+        if not hunk.text then
+          hunk.lnum, hunk.sign, hunk.text = lnum, "-", vim.trim(text)
+        end
+      else
+        run = nil
+        lnum = lnum + 1
+      end
+    end
+
+    table.insert(hunks, hunk)
+  end
+
+  return hunks
 end
 
 --- one line per file, one per hunk; targets[line] is where <CR> jumps.
@@ -82,7 +161,7 @@ function M.render(files, base, hide_viewed)
     local keys, pending = {}, {}
 
     for _, hunk in ipairs(file.hunks) do
-      local key = viewed.key(base, file.path, hunk.lnum)
+      local key = viewed.key(base, file.path, M.id(hunk))
       table.insert(keys, key)
       if not viewed.has(key) then
         table.insert(pending, { hunk = hunk, key = key })
