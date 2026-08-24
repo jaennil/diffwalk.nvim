@@ -210,10 +210,12 @@ edges           Whether a hunk is bracketed in the sign column as `┌ │ └`
                 are turned off while a review is on, so the two never fight
                 over it.
 
-                The bracket covers the whole span of a hunk, from its first
-                changed line to its last, context lines in the middle
-                included, so it reads as one shape rather than breaking up
-                wherever a hunk holds unchanged lines.
+                The bracket covers the whole span of a hunk in the buffer:
+                its changed lines, where each run of deletions belongs, and
+                the context in between, so it reads as one shape rather than
+                breaking up wherever a hunk holds unchanged lines. A hunk that
+                only deletes has no changed line of its own and is marked
+                where the deletion happened.
 
                 It runs through the removed lines as well. Those are
                 virtual lines, which have no sign column, so their gutter is

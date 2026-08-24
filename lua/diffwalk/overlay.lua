@@ -183,29 +183,47 @@ function M.refresh(bufnr)
       added[line] = true
     end
 
-    -- the span the hunk covers in this buffer, first changed line to last:
-    -- the bracket is drawn over all of it, context lines in the middle
-    -- included, so it reads as one shape instead of breaking up
-    local from, to = math.huge, 0
-    for _, line in ipairs(hunk.lines) do
-      from, to = math.min(from, line), math.max(to, line)
-    end
-    for at in pairs(runs) do
-      from, to = math.min(from, at), math.max(to, at - 1)
+    -- every line of this buffer the hunk touches: its changed lines, plus
+    -- where each run of deletions belongs. A hunk that only deletes has no
+    -- changed line of its own, and computing a span from those alone left it
+    -- empty, which is why its removed lines were never drawn.
+    local touched, sorted = {}, {}
+    local function touch(line)
+      line = math.min(math.max(line, 1), math.max(last, 1))
+      if not touched[line] then
+        touched[line], sorted[#sorted + 1] = true, line
+      end
     end
 
-    from = math.min(math.max(from, 1), last)
-    to = math.min(math.max(to, 0), last)
+    for _, line in ipairs(hunk.lines) do
+      touch(line)
+    end
+    for at in pairs(runs) do
+      if at <= last then
+        touch(at)
+      end
+    end
+
+    table.sort(sorted)
+
+    -- the bracket runs over the whole span, context lines in between
+    -- included, so it reads as one shape instead of breaking up
+    local span = {}
+    if #sorted > 0 then
+      for line = sorted[1], sorted[#sorted] do
+        span[#span + 1] = line
+      end
+    end
 
     local virt_count = 0
     for _, run in ipairs(hunk.deletions) do
       virt_count = virt_count + #run.lines
     end
 
-    local total = virt_count + math.max(to - from + 1, 0)
+    local total = virt_count + #span
     local index = 0
 
-    for position = from, math.max(to, from - 1) do
+    for _, position in ipairs(span) do
       local run = runs[position]
 
       -- what the change removed, above the line that took its place
