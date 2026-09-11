@@ -87,6 +87,32 @@ function M.commit(rev, opts)
   end, parent, opts)
 end
 
+--- The window bar of a commit's diff: hash and date first, then as much of
+--- the subject as fits. Left to the window bar's own truncation the hash and
+--- the date would go first and the subject would show its tail, which reads
+--- as a fragment of a sentence rather than a commit.
+--- @param entry table
+--- @return string
+local function winbar(entry)
+  local function escape(text)
+    return (tostring(text):gsub("%%", "%%%%"))
+  end
+
+  local head = ("%s %s  "):format(entry.rev, entry.age)
+  local room = config.options.size - vim.fn.strdisplaywidth(head) - 1
+  local subject = entry.subject
+
+  if room > 1 and vim.fn.strdisplaywidth(subject) > room then
+    subject = vim.fn.strcharpart(subject, 0, room - 1) .. "…"
+  end
+
+  return ("%%#DiffwalkWinbarRev#%s%%* %%#Comment#%s%%*  %s"):format(
+    escape(entry.rev),
+    escape(entry.age),
+    escape(subject)
+  )
+end
+
 --- Walk a list of commits: <CR> drills into one, the commit keys step to its
 --- neighbour without coming back here, and <BS> returns to the row you left
 --- rather than to the top of the list.
@@ -132,7 +158,7 @@ function M.commits(limit, at)
 
     M.commit(entry.rev, {
       auto = true,
-      title = ("%s  %s  %s"):format(entry.rev, entry.age, entry.subject),
+      title = winbar(entry),
       back = function()
         M.commits(limit, row)
       end,

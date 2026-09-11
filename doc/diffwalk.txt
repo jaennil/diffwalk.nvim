@@ -50,7 +50,8 @@ a single commit against its parent.
                         From inside that diff, `]c` and `[c` step to the next
                         and previous commit directly, so going through a stack
                         of them never returns to the picker, and the window
-                        bar names the commit in view. <BS> does come back, to
+                        bar names the commit in view: hash, how long ago, and
+                        as much of the subject as the panel is wide. <BS> does come back, to
                         the row that was left rather than to the top.
 
                         `x` in the list ticks off a commit, the same way it

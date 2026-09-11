@@ -262,9 +262,12 @@ function M.hunks(name, provider, base, opts)
     M.map(buf, keys.prev_commit, opts.prev, "Diff of the previous commit")
   end
 
-  -- which commit this is, since the list is no longer on screen
+  -- which commit this is, since the list is no longer on screen. Already a
+  -- statusline expression, escaped by whoever built it: a window bar too
+  -- narrow for it is truncated from the left, which would eat the hash and
+  -- the date first and leave the tail of the subject.
   if opts.title then
-    vim.wo[list].winbar = opts.title:gsub("%%", "%%%%")
+    vim.wo[list].winbar = opts.title
   end
 
   -- the list is a view of the diff, not a snapshot of it: an edit anywhere
