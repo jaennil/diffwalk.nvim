@@ -15,7 +15,7 @@ Most diff viewers put the change in a separate buffer, where your LSP, your jump
 ## What it does
 
 - **Branch review** — every hunk between the merge base with the default branch and your working tree. The merge base, not the branch tip, so commits that landed upstream after you branched stay out.
-- **Commit review** — pick a commit from a list, walk its own diff, come back, pick the next one.
+- **Commit review** — pick a commit from a list and walk its own diff, then step straight to the neighbouring commit with `]c` / `[c` without going back to the list at all. `<BS>` returns to the row you left, and `x` ticks off a commit you are done with, so a stack of ten is a straight line rather than a loop through the picker.
 - **Reading what was removed** — deleted lines are drawn as virtual lines, and the cursor cannot enter virtual text. `:DiffwalkOld` opens the file as it was at the base in a real buffer next to it, both sides in diff mode, so a removed signature can be walked, searched and yanked.
 - **Keeping track** — mark a hunk (or a whole file) as viewed, and it dims in both places at once: in the list, and in the file itself, where it drops out of the loud green and picks up a `✓` in the sign column. What is still bright is what is left to read. Marks are keyed by the hunk's own content, not its line number, so they hold as the file moves and are kept on disk between sessions.
 - **Live** — the buffer is rediffed against the base as you type, so editing during a review moves the hunks without the colors drifting off them, and the list follows: line numbers, counts and new hunks all update while you work.
@@ -69,7 +69,8 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 | `<CR>` | Show the hunk, cursor stays in the list |
 | `o` | Show it and jump into the file |
 | `]f` / `[f` | Next / previous file |
-| `x` | Mark the hunk as viewed; on a file line, the whole file |
+| `x` | Mark the hunk as viewed; on a file line, the whole file; in the commit list, the commit |
+| `]c` / `[c` | Next / previous commit, from inside its diff |
 | `a` | Toggle between all hunks and only the unviewed ones |
 | `<BS>` | Back to the commit list |
 | `q` | Close |
@@ -113,6 +114,8 @@ require("diffwalk").setup({
     prev_file = "[f",
     mark = "x",
     filter = "a",
+    next_commit = "]c",
+    prev_commit = "[c",
     back = "<BS>",
     close = "q",
   },

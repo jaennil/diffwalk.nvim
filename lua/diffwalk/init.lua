@@ -101,9 +101,23 @@ function M.commits(limit, at)
     return
   end
 
+  viewed.load(git.root())
+
   local lines, marks, targets = diff.render_commits(entries)
   local buf, win = panel.open("commits", lines, marks)
   local keys = config.options.keys
+
+  local function redraw()
+    local row = vim.api.nvim_win_get_cursor(win)[1]
+    lines, marks, targets = diff.render_commits(entries)
+
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+    vim.bo[buf].modifiable = false
+    panel.paint(buf, lines, marks)
+
+    vim.api.nvim_win_set_cursor(win, { math.min(row, #lines), 0 })
+  end
 
   if at then
     vim.api.nvim_win_set_cursor(win, { math.min(math.max(at, 1), #lines), 0 })
@@ -141,6 +155,13 @@ function M.commits(limit, at)
   panel.map(buf, keys.open, function()
     walk(vim.fn.line("."))
   end, "Show this commit's diff")
+  panel.map(buf, keys.mark, function()
+    local entry = targets[vim.fn.line(".")]
+    if entry then
+      viewed.toggle_all(entry.keys)
+      redraw()
+    end
+  end, "Mark this commit as gone through")
   panel.map(buf, keys.next_commit, function()
     vim.api.nvim_win_set_cursor(win, { math.min(vim.fn.line(".") + 1, #lines), 0 })
   end, "Next commit")

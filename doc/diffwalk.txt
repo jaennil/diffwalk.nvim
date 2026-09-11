@@ -41,7 +41,16 @@ a single commit against its parent.
                                                              *:DiffwalkCommits*
 :DiffwalkCommits [n]    List the last [n] commits (default: |diffwalk-config|
                         `commits`). <CR> walks the diff of the commit under
-                        the cursor, <BS> comes back to the list.
+                        the cursor.
+
+                        From inside that diff, `]c` and `[c` step to the next
+                        and previous commit directly, so going through a stack
+                        of them never returns to the picker, and the window
+                        bar names the commit in view. <BS> does come back, to
+                        the row that was left rather than to the top.
+
+                        `x` in the list ticks off a commit, the same way it
+                        marks a hunk, and the mark is kept like any other.
 
                                                               *:DiffwalkCommit*
 :DiffwalkCommit {rev}   Walk the diff of {rev} against its parent. A root
@@ -101,6 +110,7 @@ Default mappings inside the panel:
     [f          previous file
     x           mark as viewed; on a file line, the whole file
     a           show all hunks, or only the unviewed ones
+    ]c [c       next / previous commit, in a commit's diff
     <BS>        back to the commit list
     q           close the panel
 
@@ -178,6 +188,8 @@ setup() is optional. Defaults: >
         prev_file = "[f",
         mark = "x",
         filter = "a",
+        next_commit = "]c",
+        prev_commit = "[c",
         back = "<BS>",
         close = "q",
       },

@@ -220,6 +220,12 @@ function M.render(files, base, hide_viewed)
   return lines, marks, targets
 end
 
+--- @param rev string
+--- @return string key under which a whole commit counts as viewed
+function M.commit_key(rev)
+  return viewed.key("commit", "", rev)
+end
+
 --- @param entries table[] as returned by git.commits
 --- @return string[] lines, table[] marks, table<integer, table> targets
 function M.render_commits(entries)
@@ -231,13 +237,21 @@ function M.render_commits(entries)
   end
 
   for _, entry in ipairs(entries) do
+    local key = M.commit_key(entry.rev)
+    local seen = viewed.has(key)
+    local mark = seen and MARK or "  "
     local age = ("%-" .. width .. "s"):format(entry.age)
-    table.insert(lines, ("%s  %s  %s"):format(entry.rev, age, entry.subject))
-    targets[#lines] = entry
 
-    local age_at = #entry.rev + 2
-    table.insert(marks, { #lines, 0, #entry.rev, "Added" })
-    table.insert(marks, { #lines, age_at, age_at + #age, "Comment" })
+    table.insert(lines, ("%s%s  %s  %s"):format(mark, entry.rev, age, entry.subject))
+    targets[#lines] = vim.tbl_extend("force", entry, { keys = { key } })
+
+    if seen then
+      table.insert(marks, { #lines, 0, -1, "Comment" })
+    else
+      local age_at = #mark + #entry.rev + 2
+      table.insert(marks, { #lines, #mark, #mark + #entry.rev, "Added" })
+      table.insert(marks, { #lines, age_at, age_at + #age, "Comment" })
+    end
   end
 
   return lines, marks, targets
