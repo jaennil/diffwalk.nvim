@@ -111,12 +111,12 @@ end
 --- @param name string
 --- @param provider fun(): table[] the files to list, called again on refresh
 --- @param base string revision the diff is against
---- @param back? function what <BS> returns to
-function M.hunks(name, provider, base, back)
+--- @param opts? {back?: function, next?: function, prev?: function, title?: string}
+function M.hunks(name, provider, base, opts)
+  opts = opts or {}
   local diff = require("diffwalk.diff")
   local viewed = require("diffwalk.viewed")
-  local opts = config.options
-  local keys = opts.keys
+  local keys = config.options.keys
 
   local hide = false
   local files = provider()
@@ -239,8 +239,23 @@ function M.hunks(name, provider, base, back)
   end, "Show all hunks or only the unviewed ones")
   M.map(buf, keys.close, "<CMD>close<CR>", "Close the list")
 
-  if back then
-    M.map(buf, keys.back, back, "Back to the commit list")
+  if opts.back then
+    M.map(buf, keys.back, opts.back, "Back to the commit list")
+  end
+
+  -- stepping straight to the next commit, so walking a stack of them never
+  -- goes back through the list
+  if opts.next then
+    M.map(buf, keys.next_commit, opts.next, "Diff of the next commit")
+  end
+
+  if opts.prev then
+    M.map(buf, keys.prev_commit, opts.prev, "Diff of the previous commit")
+  end
+
+  -- which commit this is, since the list is no longer on screen
+  if opts.title then
+    vim.wo[list].winbar = opts.title:gsub("%%", "%%%%")
   end
 
   -- the list is a view of the diff, not a snapshot of it: an edit anywhere

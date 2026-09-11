@@ -61,6 +61,8 @@ local defaults = {
     prev_file = "[f",
     mark = "x",
     filter = "a",
+    next_commit = "]c",
+    prev_commit = "[c",
     back = "<BS>",
     close = "q",
   },

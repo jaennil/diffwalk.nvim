@@ -67,8 +67,8 @@ end
 
 --- one commit's own changes, diffed against its parent
 --- @param rev string
---- @param back? function what <BS> returns to
-function M.commit(rev, back)
+--- @param opts? {back?: function, next?: function, prev?: function, title?: string}
+function M.commit(rev, opts)
   local parent = git.parent(rev)
   local out = git.run({ "git", "diff", "--no-color", parent, rev })
 
@@ -78,19 +78,21 @@ function M.commit(rev, back)
   end
 
   highlight.enable(parent)
-
   viewed.load(git.root())
 
   local files = diff.parse(out)
   overlay.set(parent, files)
   panel.hunks(rev, function()
     return files -- a commit does not change under you
-  end, parent, back)
+  end, parent, opts)
 end
 
---- pick a commit, then walk its diff; <CR> drills in, <BS> comes back here
+--- Walk a list of commits: <CR> drills into one, the commit keys step to its
+--- neighbour without coming back here, and <BS> returns to the row you left
+--- rather than to the top of the list.
 --- @param limit? integer
-function M.commits(limit)
+--- @param at? integer row to put the cursor on
+function M.commits(limit, at)
   limit = limit or config.options.commits
 
   local entries = git.commits(limit)
@@ -100,17 +102,51 @@ function M.commits(limit)
   end
 
   local lines, marks, targets = diff.render_commits(entries)
-  local buf = panel.open("commits", lines, marks)
+  local buf, win = panel.open("commits", lines, marks)
   local keys = config.options.keys
 
-  panel.map(buf, keys.open, function()
-    local entry = targets[vim.fn.line(".")]
-    if entry then
-      M.commit(entry.rev, function()
-        M.commits(limit)
-      end)
+  if at then
+    vim.api.nvim_win_set_cursor(win, { math.min(math.max(at, 1), #lines), 0 })
+  end
+
+  --- @param row integer index into the list
+  local function walk(row)
+    local entry = targets[row]
+    if not entry then
+      return
     end
+
+    M.commit(entry.rev, {
+      title = ("%s  %s  %s"):format(entry.rev, entry.age, entry.subject),
+      back = function()
+        M.commits(limit, row)
+      end,
+      next = function()
+        if targets[row + 1] then
+          walk(row + 1)
+        else
+          vim.notify("diffwalk: last commit")
+        end
+      end,
+      prev = function()
+        if targets[row - 1] then
+          walk(row - 1)
+        else
+          vim.notify("diffwalk: first commit")
+        end
+      end,
+    })
+  end
+
+  panel.map(buf, keys.open, function()
+    walk(vim.fn.line("."))
   end, "Show this commit's diff")
+  panel.map(buf, keys.next_commit, function()
+    vim.api.nvim_win_set_cursor(win, { math.min(vim.fn.line(".") + 1, #lines), 0 })
+  end, "Next commit")
+  panel.map(buf, keys.prev_commit, function()
+    vim.api.nvim_win_set_cursor(win, { math.max(vim.fn.line(".") - 1, 1), 0 })
+  end, "Previous commit")
   panel.map(buf, keys.close, "<CMD>close<CR>", "Close the commit list")
 end
 
