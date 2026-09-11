@@ -282,6 +282,11 @@ require("diffwalk").reset()
 ==============================================================================
 7. CAVEATS                                                    *diffwalk-caveats*
 
+A submodule is listed like any other path, since that is how it appears in
+the diff ("Subproject commit …"), but it is a directory on disk: opening one
+is refused rather than handing the window to a file explorer, and auto_open
+skips over it to the first hunk it can actually show.
+
 <CR> opens the current version of the file on disk. For a branch review that
 is exact. For an older commit the line numbers drift as far as the file has
 moved since that commit, and a file deleted in the working tree is reported

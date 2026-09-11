@@ -139,6 +139,7 @@ colors = { added = "#1d2214", removed = "#2d2220", ... }
 - Removed lines are virtual lines — they push the real code down. `:DiffwalkToggleDeleted` turns them off, `:DiffwalkOld` gives you a buffer to walk them in.
 - Only the changed lines of a viewed hunk are dimmed, never the context around them.
 - Viewed marks are stored under `stdpath("state")/diffwalk`, one file per repository, and keyed by the diff base and the hunk's content: editing a hunk you already marked makes it a different hunk, and it comes back unmarked. `:DiffwalkReset` drops them.
+- A submodule appears in the diff as a path but is a directory on disk, so opening one is refused and `auto_open` skips it.
 - The buffer `:DiffwalkOld` opens is not a file on disk: treesitter highlights it, but no LSP attaches to it.
 
 ## License

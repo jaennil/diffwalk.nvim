@@ -151,8 +151,17 @@ function M.hunks(name, provider, base, opts)
       return
     end
 
-    if not vim.uv.fs_stat(target.file) then
-      vim.notify(target.file .. " is gone in the working tree", vim.log.levels.WARN)
+    local stat = vim.uv.fs_stat(target.file)
+
+    if not stat then
+      vim.notify("diffwalk: " .. target.file .. " is gone in the working tree", vim.log.levels.WARN)
+      return
+    end
+
+    -- a submodule looks like a file in the diff ("Subproject commit …") but is
+    -- a directory here, and editing one hands the window to a file explorer
+    if stat.type ~= "file" then
+      vim.notify("diffwalk: " .. target.file .. " is a submodule", vim.log.levels.WARN)
       return
     end
 
@@ -266,7 +275,12 @@ function M.hunks(name, provider, base, opts)
   -- put its first hunk on screen, cursor staying here
   if opts.auto and config.options.auto_open then
     for row = 1, #lines do
-      if targets[row] and not targets[row].header then
+      local target = targets[row]
+      local stat = target and not target.header and vim.uv.fs_stat(target.file)
+
+      -- skip what cannot be shown, a submodule above all, rather than
+      -- stopping on it and leaving the code window on something else
+      if stat and stat.type == "file" then
         vim.api.nvim_win_set_cursor(list, { row, 0 })
         open(false)
         break
