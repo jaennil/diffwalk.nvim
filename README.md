@@ -15,7 +15,7 @@ Most diff viewers put the change in a separate buffer, where your LSP, your jump
 ## What it does
 
 - **Branch review** — every hunk between the merge base with the default branch and your working tree. The merge base, not the branch tip, so commits that landed upstream after you branched stay out.
-- **Commit review** — pick a commit from a list and walk its own diff, then step straight to the neighbouring commit with `]c` / `[c` without going back to the list at all. `<BS>` returns to the row you left, and `x` ticks off a commit you are done with, so a stack of ten is a straight line rather than a loop through the picker.
+- **Commit review** — pick a commit from a list and walk its own diff, then step straight to the neighbouring commit with `]c` / `[c` without going back to the list at all. Its first hunk is on screen the moment the commit opens. `<BS>` returns to the row you left, and `x` ticks off a commit you are done with, so a stack of ten is a straight line rather than a loop through the picker.
 - **Reading what was removed** — deleted lines are drawn as virtual lines, and the cursor cannot enter virtual text. `:DiffwalkOld` opens the file as it was at the base in a real buffer next to it, both sides in diff mode, so a removed signature can be walked, searched and yanked.
 - **Keeping track** — mark a hunk (or a whole file) as viewed, and it dims in both places at once: in the list, and in the file itself, where it drops out of the loud green and picks up a `✓` in the sign column. What is still bright is what is left to read. Marks are keyed by the hunk's own content, not its line number, so they hold as the file moves and are kept on disk between sessions.
 - **Live** — the buffer is rediffed against the base as you type, so editing during a review moves the hunks without the colors drifting off them, and the list follows: line numbers, counts and new hunks all update while you work.
@@ -92,6 +92,7 @@ require("diffwalk").setup({
   vertical = true,   -- :DiffwalkOld splits vertically
   edges = true,      -- ┌ │ └ brackets rather than a plain bar
   persist = true,    -- keep the viewed marks between sessions
+  auto_open = true,  -- show a commit's first hunk as soon as it opens
   linehl = true,     -- paint the whole line, not just the sign
   deleted = true,    -- show removed lines as virtual lines
   word_diff = true,  -- highlight the changed regions inside a line

@@ -43,6 +43,10 @@ a single commit against its parent.
                         `commits`). <CR> walks the diff of the commit under
                         the cursor.
 
+                        The first hunk of the commit is shown in the code
+                        window straight away, with the cursor staying in the
+                        list; |diffwalk-config| `auto_open` turns that off.
+
                         From inside that diff, `]c` and `[c` step to the next
                         and previous commit directly, so going through a stack
                         of them never returns to the picker, and the window
@@ -169,6 +173,7 @@ setup() is optional. Defaults: >
       vertical = true,
       edges = true,
       persist = true,
+      auto_open = true,
 
       colors = {
         added = "#005f00",
@@ -238,6 +243,8 @@ edges           Whether a hunk is bracketed in the sign column as `┌ │ └`
                 still empty at the moment the marks are placed.
 
 persist         Whether the viewed marks are kept on disk between sessions.
+
+auto_open       Whether opening a commit shows its first hunk right away.
 
 position        Where the panel goes: "right", "left", "bottom" or "top".
 

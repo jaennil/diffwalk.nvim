@@ -131,6 +131,7 @@ function M.commits(limit, at)
     end
 
     M.commit(entry.rev, {
+      auto = true,
       title = ("%s  %s  %s"):format(entry.rev, entry.age, entry.subject),
       back = function()
         M.commits(limit, row)

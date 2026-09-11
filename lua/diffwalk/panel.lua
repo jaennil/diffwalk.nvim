@@ -111,7 +111,7 @@ end
 --- @param name string
 --- @param provider fun(): table[] the files to list, called again on refresh
 --- @param base string revision the diff is against
---- @param opts? {back?: function, next?: function, prev?: function, title?: string}
+--- @param opts? {back?: function, next?: function, prev?: function, title?: string, auto?: boolean}
 function M.hunks(name, provider, base, opts)
   opts = opts or {}
   local diff = require("diffwalk.diff")
@@ -261,6 +261,18 @@ function M.hunks(name, provider, base, opts)
   -- the list is a view of the diff, not a snapshot of it: an edit anywhere
   -- has to reach it as well
   M.active = redraw
+
+  -- arriving at a commit with nothing in the code window is a wasted step:
+  -- put its first hunk on screen, cursor staying here
+  if opts.auto and config.options.auto_open then
+    for row = 1, #lines do
+      if targets[row] and not targets[row].header then
+        vim.api.nvim_win_set_cursor(list, { row, 0 })
+        open(false)
+        break
+      end
+    end
+  end
 
   return buf
 end

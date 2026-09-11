@@ -23,6 +23,7 @@ local M = {}
 --- @field vertical boolean open the base version of a file in a vertical split
 --- @field edges boolean bracket each hunk in the sign column
 --- @field persist boolean keep the viewed marks on disk between sessions
+--- @field auto_open boolean show a commit's first hunk as soon as it opens
 --- @field colors DiffwalkColors
 --- @field keys table<string, string>
 local defaults = {
@@ -40,6 +41,7 @@ local defaults = {
   vertical = true,
   edges = true, -- draw hunks as ┌ │ └ brackets rather than a plain bar
   persist = true,
+  auto_open = true,
 
   -- most themes keep their diff colors a few shades above the background,
   -- which barely reads as green or red; these are deliberately saturated
