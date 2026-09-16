@@ -140,6 +140,69 @@ function M.exists(rev, path)
   return M.run({ "git", "cat-file", "-e", rev .. ":" .. path }, true) ~= nil
 end
 
+--- Who wrote each line of a file at a revision. Deleted lines only exist in
+--- the base, so blaming the working tree says nothing about them.
+--- @param rev string
+--- @param path string
+--- @return table<integer, {author: string, time: integer, summary: string}>?
+function M.blame(rev, path)
+  local out = M.run({ "git", "blame", "--line-porcelain", rev, "--", path }, true)
+  if not out then
+    return nil
+  end
+
+  local lines = {}
+  local entry, lnum = nil, nil
+
+  for _, line in ipairs(vim.split(out, "\n", { plain = true })) do
+    local header = line:match("^%x+%s+%d+%s+(%d+)")
+
+    if header then
+      entry, lnum = {}, tonumber(header)
+    elseif entry then
+      local author = line:match("^author (.*)$")
+      local time = line:match("^author%-time (%d+)$")
+      local summary = line:match("^summary (.*)$")
+
+      if author then
+        entry.author = author
+      elseif time then
+        entry.time = tonumber(time)
+      elseif summary then
+        entry.summary = summary
+        lines[lnum] = entry -- the summary closes the block
+      end
+    end
+  end
+
+  return lines
+end
+
+--- "11 months ago", roughly the way git words it
+--- @param time integer unix seconds
+--- @return string
+function M.ago(time)
+  local seconds = math.max(os.time() - time, 0)
+  local scale = {
+    { 31556952, "year" },
+    { 2629746, "month" },
+    { 604800, "week" },
+    { 86400, "day" },
+    { 3600, "hour" },
+    { 60, "minute" },
+  }
+
+  for _, step in ipairs(scale) do
+    local amount = math.floor(seconds / step[1])
+
+    if amount >= 1 then
+      return ("%d %s%s ago"):format(amount, step[2], amount == 1 and "" or "s")
+    end
+  end
+
+  return "just now"
+end
+
 --- revision the file buffers are currently diffed against; the branch review
 --- and a commit review set different ones
 --- @param base? string

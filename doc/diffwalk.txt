@@ -72,7 +72,14 @@ a single commit against its parent.
 
                         Removed lines are virtual lines and virtual text
                         cannot hold the cursor, so this is how a deleted
-                        function signature gets read, searched or yanked. The
+                        function signature gets read, searched or yanked.
+
+                        The line under the cursor carries a blame of the base
+                        revision - author, age and subject - which is the only
+                        way to see who wrote a line that is gone from the
+                        working tree: blaming the file there cannot know about
+                        lines it no longer has. |diffwalk-config| `blame`
+                        turns it off. The
                         buffer is not a file on disk: treesitter highlights
                         it, but no LSP attaches. |diffwalk-config| `keys.close`
                         closes it and turns diff mode off again.
@@ -175,6 +182,7 @@ setup() is optional. Defaults: >
       edges = true,
       persist = true,
       auto_open = true,
+      blame = true,
 
       colors = {
         added = "#005f00",
@@ -246,6 +254,8 @@ edges           Whether a hunk is bracketed in the sign column as `┌ │ └`
 persist         Whether the viewed marks are kept on disk between sessions.
 
 auto_open       Whether opening a commit shows its first hunk right away.
+
+blame           Whether :DiffwalkOld blames the line under the cursor.
 
 position        Where the panel goes: "right", "left", "bottom" or "top".
 

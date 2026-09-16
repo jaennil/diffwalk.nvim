@@ -57,6 +57,7 @@ function M.palette()
 
   vim.api.nvim_set_hl(0, "DiffwalkRemovedSign", { fg = colors.removed_sign })
   vim.api.nvim_set_hl(0, "DiffwalkWinbarRev", { fg = colors.added_sign, bold = true })
+  vim.api.nvim_set_hl(0, "DiffwalkBlame", { link = "Comment", default = true })
 end
 
 --- @param base string revision the file buffers are diffed against

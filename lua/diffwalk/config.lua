@@ -24,6 +24,7 @@ local M = {}
 --- @field edges boolean bracket each hunk in the sign column
 --- @field persist boolean keep the viewed marks on disk between sessions
 --- @field auto_open boolean show a commit's first hunk as soon as it opens
+--- @field blame boolean who wrote the line, in the base version of a file
 --- @field colors DiffwalkColors
 --- @field keys table<string, string>
 local defaults = {
@@ -42,6 +43,7 @@ local defaults = {
   edges = true, -- draw hunks as ┌ │ └ brackets rather than a plain bar
   persist = true,
   auto_open = true,
+  blame = true,
 
   -- most themes keep their diff colors a few shades above the background,
   -- which barely reads as green or red; these are deliberately saturated

@@ -4,6 +4,50 @@ local git = require("diffwalk.git")
 local M = {}
 
 local NAME = "diffwalk-old://"
+local ns = vim.api.nvim_create_namespace("diffwalk-blame")
+
+--- Who wrote the line under the cursor, shown the way gitsigns shows it for
+--- the working tree. Deleted lines are virtual and cannot hold a cursor, so
+--- this is where their author can be read: they are real lines here.
+--- @param bufnr integer
+--- @param base string
+--- @param path string
+local function blame(bufnr, base, path)
+  local lines = git.blame(base, path)
+  if not lines then
+    return
+  end
+
+  local function show()
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      return
+    end
+
+    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local entry = lines[lnum]
+
+    if not entry then
+      return
+    end
+
+    vim.api.nvim_buf_set_extmark(bufnr, ns, lnum - 1, 0, {
+      virt_text = {
+        { ("  %s, %s - %s"):format(entry.author, git.ago(entry.time), entry.summary), "DiffwalkBlame" },
+      },
+      virt_text_pos = "eol",
+    })
+  end
+
+  vim.api.nvim_create_autocmd({ "CursorMoved", "BufEnter" }, {
+    buffer = bufnr,
+    desc = "diffwalk: blame of the line in the base version",
+    callback = show,
+  })
+
+  show()
+end
 
 --- @param name string
 local function wipe_existing(name)
@@ -67,6 +111,10 @@ function M.open()
   vim.cmd("diffthis")
   vim.api.nvim_set_current_win(win)
   vim.cmd("normal! zz")
+
+  if config.options.blame then
+    blame(buf, base, relpath)
+  end
 
   vim.keymap.set("n", config.options.keys.close, function()
     if vim.api.nvim_win_is_valid(win) then
