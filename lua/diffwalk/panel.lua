@@ -172,6 +172,12 @@ function M.hunks(name, provider, base, opts)
     end
 
     vim.cmd("edit " .. vim.fn.fnameescape(target.file))
+
+    -- the overlay is painted from an autocommand as the buffer appears, and
+    -- what it measured then can be short of the finished buffer; repainting
+    -- once it has settled costs a diff of one file
+    require("diffwalk.overlay").schedule(vim.api.nvim_get_current_buf())
+
     local last = vim.api.nvim_buf_line_count(0)
     vim.api.nvim_win_set_cursor(0, { math.min(math.max(target.lnum, 1), last), 0 })
     vim.cmd("normal! zz")
